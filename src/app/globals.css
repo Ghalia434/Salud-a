@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f9f8f3;
+  --foreground: #14301a;
+
+  --color-brand-cream: #f9f8f3;
+  --color-brand-900: #122b18;
+  --color-brand-800: #16351f;
+  --color-brand-700: #1e4527;
+  --color-brand-600: #2c5c37;
+  --color-brand-500: #3f7a4c;
+  --color-brand-400: #6ba374;
+  --color-brand-300: #a3c8a8;
+  --color-brand-200: #d3e5d5;
+  --color-brand-100: #eaf2ea;
+  --color-brand-gold: #c9a227;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-cream: var(--color-brand-cream);
+  --color-brand-900: var(--color-brand-900);
+  --color-brand-800: var(--color-brand-800);
+  --color-brand-700: var(--color-brand-700);
+  --color-brand-600: var(--color-brand-600);
+  --color-brand-500: var(--color-brand-500);
+  --color-brand-400: var(--color-brand-400);
+  --color-brand-300: var(--color-brand-300);
+  --color-brand-200: var(--color-brand-200);
+  --color-brand-100: var(--color-brand-100);
+  --color-brand-gold: var(--color-brand-gold);
+  --font-sans: var(--font-jakarta);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f2013;
+    --foreground: #eaf2ea;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@keyframes hero-zoom {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.12);
+  }
+}
+
+.animate-hero-zoom {
+  animation: hero-zoom 9s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-zoom {
+    animation: none;
+  }
+}
