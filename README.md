@@ -11,29 +11,12 @@ needed to actually run this for real.
 3. Copy `.env.local.example` to `.env.local` and fill in your project's URL and anon key
    (Project Settings → API).
 
-## 2. Enable email OTP login (required for checkout)
-
-Clients verify their email with a 6-digit code during checkout (`/commander/livraison`)
-and to log back into `/compte`. Supabase sends this out of the box with its built-in
-email service — no third-party account needed. One dashboard tweak is required so the
-email actually shows a code instead of only a "Log In" link:
-
-1. In Supabase → Authentication → Email Templates → **Magic Link**.
-2. Add `{{ .Token }}` somewhere in the template body (e.g. "Your code: `{{ .Token }}`").
-3. Save.
-
-Supabase's built-in email sending is rate-limited (a few emails/hour) — fine for testing,
-but for production traffic configure custom SMTP under Authentication → Settings.
-
-The phone number is still collected as plain delivery/contact info in the checkout form
-and stored on the client's profile — it's just no longer used to log in.
-
-## 3. Create the storage bucket for meal photos
+## 2. Create the storage bucket for meal photos
 
 In Supabase → Storage, create a **public** bucket named `meal-photos`. The admin meal
 editor (`/admin/repas/[id]`) uploads directly to it and stores the public URL on the meal.
 
-## 4. Create the first admin account
+## 3. Create the first admin account
 
 There's no self-serve "become admin" flow by design. To create the first admin:
 
@@ -41,7 +24,10 @@ There's no self-serve "become admin" flow by design. To create the first admin:
 2. In the SQL editor: `update profiles set role = 'admin' where id = '<that user's id>';`
 3. Log in at `/admin/login`.
 
-## 5. Run it
+Client checkout requires no account — orders are anonymous, the team follows up by
+WhatsApp using the phone number collected at checkout. Only admins log in.
+
+## 4. Run it
 
 ```bash
 npm install

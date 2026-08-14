@@ -88,7 +88,7 @@ export default async function AdminOrdersPage({
               </div>
               <div className="flex items-center gap-4">
                 <span className="font-semibold text-brand-800">
-                  {formatPrice(order.pack_price)}
+                  {formatPrice(order.pack_price + order.delivery_fee)}
                 </span>
                 <StatusBadge status={order.status} />
               </div>

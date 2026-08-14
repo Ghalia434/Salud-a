@@ -1,13 +1,20 @@
-export type ProgramType = "perte_de_poids" | "equilibre" | "prise_de_masse";
+export type ProgramType =
+  | "perte_de_poids"
+  | "equilibre"
+  | "prise_de_masse"
+  | "transformation_corporelle";
 
 export type OrderStatus =
   | "en_attente"
   | "confirmee"
   | "en_preparation"
   | "en_livraison"
-  | "livree";
+  | "livree"
+  | "annulee";
 
 export type UserRole = "client" | "admin";
+
+export type ExtraCategory = "gourmandise" | "detox";
 
 export interface Database {
   public: {
@@ -65,10 +72,10 @@ export interface Database {
         Row: {
           id: string;
           order_number: string;
-          user_id: string;
           program: ProgramType;
           pack_plates: number;
           pack_price: number;
+          delivery_fee: number;
           full_name: string;
           phone: string;
           address: string;
@@ -81,14 +88,15 @@ export interface Database {
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["orders"]["Row"]> & {
-          user_id: string;
           program: ProgramType;
           pack_plates: number;
           pack_price: number;
+          delivery_fee: number;
           full_name: string;
           phone: string;
           address: string;
           quartier: string;
+          city: string;
         };
         Update: Partial<Database["public"]["Tables"]["orders"]["Row"]>;
         Relationships: [];
@@ -108,9 +116,61 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["order_items"]["Row"]>;
         Relationships: [];
       };
+      extras: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          ingredients: string | null;
+          portion: string | null;
+          price: number;
+          category: ExtraCategory;
+          photo_url: string | null;
+          active: boolean;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["extras"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["extras"]["Row"]>;
+        Relationships: [];
+      };
+      order_extras: {
+        Row: {
+          id: string;
+          order_id: string;
+          extra_id: string;
+          quantity: number;
+          is_gift: boolean;
+        };
+        Insert: Partial<Database["public"]["Tables"]["order_extras"]["Row"]> & {
+          order_id: string;
+          extra_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["order_extras"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      create_order: {
+        Args: {
+          p_program: ProgramType;
+          p_pack_plates: number;
+          p_pack_price: number;
+          p_delivery_fee: number;
+          p_full_name: string;
+          p_phone: string;
+          p_address: string;
+          p_quartier: string;
+          p_city: string;
+          p_gift_detox: boolean;
+          p_gift_gourmandise: boolean;
+          p_free_delivery: boolean;
+          p_items: { meal_id: string; quantity: number }[];
+          p_extras: { extra_id: string; quantity: number; is_gift: boolean }[];
+        };
+        Returns: { order_id: string; order_number: string }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

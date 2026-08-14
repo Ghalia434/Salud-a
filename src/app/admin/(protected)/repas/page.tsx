@@ -21,8 +21,8 @@ export default async function AdminMealsPage() {
         </Link>
       </div>
       <p className="mt-2 text-sm text-brand-600">
-        Chaque plat est visible pour les 3 objectifs (Perte de poids, Équilibré, Prise
-        de masse).
+        Chaque plat est visible pour les 4 objectifs (Perte de poids, Équilibré, Prise
+        de masse, Transformation corporelle).
       </p>
 
       <ul className="mt-8 space-y-3">

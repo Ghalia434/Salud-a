@@ -6,6 +6,7 @@ const STEPS = [
   { href: "/commander/objectif", label: "Objectif" },
   { href: "/commander/pack", label: "Formule" },
   { href: "/commander/repas", label: "Repas" },
+  { href: "/commander/extras", label: "Gourmandises" },
   { href: "/commander/panier", label: "Panier" },
   { href: "/commander/livraison", label: "Livraison" },
   { href: "/commander/confirmation", label: "Confirmation" },

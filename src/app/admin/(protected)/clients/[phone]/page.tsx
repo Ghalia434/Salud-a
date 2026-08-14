@@ -8,44 +8,46 @@ import { formatDate, formatPrice } from "@/lib/format";
 export default async function AdminClientDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ phone: string }>;
 }) {
-  const { id } = await params;
+  const { phone } = await params;
+  const decodedPhone = decodeURIComponent(phone);
   const supabase = await createClient();
-
-  const { data: client } = await supabase.from("profiles").select("*").eq("id", id).single();
-  if (!client) notFound();
 
   const { data: orders } = await supabase
     .from("orders")
     .select("*")
-    .eq("user_id", id)
+    .eq("phone", decodedPhone)
     .order("created_at", { ascending: false });
+
+  if (!orders || orders.length === 0) notFound();
+
+  const latest = orders[0];
+  const totalSpent = orders.reduce((sum, o) => sum + o.pack_price + o.delivery_fee, 0);
 
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-2xl font-bold text-brand-800">
-        {client.full_name || "Client sans nom"}
+        {latest.full_name || "Client sans nom"}
       </h1>
 
       <div className="mt-6 rounded-2xl border border-brand-200 bg-white p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-500">
           Coordonnées
         </h2>
-        <p className="text-brand-800">{client.phone}</p>
+        <p className="text-brand-800">{latest.phone}</p>
         <p className="text-brand-600">
-          {client.address ? `${client.address}, ` : ""}
-          {client.quartier ? `${client.quartier}, ` : ""}
-          {client.city}
+          {latest.address}, {latest.quartier}, {latest.city}
         </p>
         <p className="mt-2 text-xs text-brand-500">
-          Client depuis le {formatDate(client.created_at)}
+          {orders.length} commande{orders.length > 1 ? "s" : ""} · {formatPrice(totalSpent)}{" "}
+          au total
         </p>
       </div>
 
       <h2 className="mt-8 text-lg font-bold text-brand-800">Historique des commandes</h2>
       <ul className="mt-4 space-y-3">
-        {orders?.map((order) => (
+        {orders.map((order) => (
           <li key={order.id}>
             <Link
               href={`/admin/commandes/${order.id}`}
@@ -60,16 +62,13 @@ export default async function AdminClientDetailPage({
               </div>
               <div className="flex items-center gap-4">
                 <span className="font-semibold text-brand-800">
-                  {formatPrice(order.pack_price)}
+                  {formatPrice(order.pack_price + order.delivery_fee)}
                 </span>
                 <StatusBadge status={order.status} />
               </div>
             </Link>
           </li>
         ))}
-        {orders?.length === 0 && (
-          <p className="text-brand-500">Aucune commande pour ce client.</p>
-        )}
       </ul>
     </div>
   );

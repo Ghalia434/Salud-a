@@ -17,18 +17,28 @@ export interface CartDelivery {
   phone: string;
   address: string;
   quartier: string;
+  city: string;
+  deliveryFee: number;
 }
 
 interface CartState {
   program: ProgramType | null;
   pack: CartPack | null;
   items: Record<string, number>; // mealId -> quantity
+  extras: Record<string, number>; // extraId -> paid quantity (gifts tracked separately)
+  giftDetoxId: string | null;
+  giftGourmandiseId: string | null;
   delivery: CartDelivery | null;
   setProgram: (program: ProgramType) => void;
   setPack: (pack: CartPack) => void;
   addMeal: (mealId: string) => void;
   removeMeal: (mealId: string) => void;
   setQuantity: (mealId: string, quantity: number) => void;
+  addExtra: (extraId: string) => void;
+  removeExtra: (extraId: string) => void;
+  setExtraQuantity: (extraId: string, quantity: number) => void;
+  setGiftDetoxId: (extraId: string | null) => void;
+  setGiftGourmandiseId: (extraId: string | null) => void;
   setDelivery: (delivery: CartDelivery) => void;
   totalSelected: () => number;
   reset: () => void;
@@ -40,10 +50,22 @@ export const useCartStore = create<CartState>()(
       program: null,
       pack: null,
       items: {},
+      extras: {},
+      giftDetoxId: null,
+      giftGourmandiseId: null,
       delivery: null,
       setProgram: (program) =>
-        set({ program, pack: null, items: {}, delivery: null }),
-      setPack: (pack) => set({ pack, items: {} }),
+        set({
+          program,
+          pack: null,
+          items: {},
+          extras: {},
+          giftDetoxId: null,
+          giftGourmandiseId: null,
+          delivery: null,
+        }),
+      setPack: (pack) =>
+        set({ pack, items: {}, extras: {}, giftDetoxId: null, giftGourmandiseId: null }),
       addMeal: (mealId) =>
         set((state) => {
           const current = state.items[mealId] ?? 0;
@@ -70,10 +92,44 @@ export const useCartStore = create<CartState>()(
           }
           return { items: { ...state.items, [mealId]: quantity } };
         }),
+      addExtra: (extraId) =>
+        set((state) => ({
+          extras: { ...state.extras, [extraId]: (state.extras[extraId] ?? 0) + 1 },
+        })),
+      removeExtra: (extraId) =>
+        set((state) => {
+          const current = state.extras[extraId] ?? 0;
+          if (current <= 1) {
+            const rest = { ...state.extras };
+            delete rest[extraId];
+            return { extras: rest };
+          }
+          return { extras: { ...state.extras, [extraId]: current - 1 } };
+        }),
+      setExtraQuantity: (extraId, quantity) =>
+        set((state) => {
+          if (quantity <= 0) {
+            const rest = { ...state.extras };
+            delete rest[extraId];
+            return { extras: rest };
+          }
+          return { extras: { ...state.extras, [extraId]: quantity } };
+        }),
+      setGiftDetoxId: (extraId) => set({ giftDetoxId: extraId }),
+      setGiftGourmandiseId: (extraId) => set({ giftGourmandiseId: extraId }),
       setDelivery: (delivery) => set({ delivery }),
       totalSelected: () =>
         Object.values(get().items).reduce((sum, qty) => sum + qty, 0),
-      reset: () => set({ program: null, pack: null, items: {}, delivery: null }),
+      reset: () =>
+        set({
+          program: null,
+          pack: null,
+          items: {},
+          extras: {},
+          giftDetoxId: null,
+          giftGourmandiseId: null,
+          delivery: null,
+        }),
     }),
     { name: "saludea-cart" }
   )

@@ -2,20 +2,26 @@
 
 :root {
   color-scheme: light;
-  --background: #f9f8f3;
-  --foreground: #14301a;
+  --background: #f7f3eb;
+  --foreground: #3e3a36;
 
-  --color-brand-cream: #f9f8f3;
-  --color-brand-900: #122b18;
-  --color-brand-800: #16351f;
-  --color-brand-700: #1e4527;
-  --color-brand-600: #2c5c37;
-  --color-brand-500: #3f7a4c;
-  --color-brand-400: #6ba374;
-  --color-brand-300: #a3c8a8;
-  --color-brand-200: #d3e5d5;
-  --color-brand-100: #eaf2ea;
-  --color-brand-gold: #c9a227;
+  --color-brand-cream: #f7f3eb;
+  --color-brand-900: #3e3a36;
+  --color-brand-800: #4b5a34;
+  --color-brand-700: #556b2f;
+  --color-brand-600: #66803a;
+  --color-brand-500: #7a9448;
+  --color-brand-400: #93a96a;
+  --color-brand-300: #a8b39a;
+  --color-brand-200: #d6dcc9;
+  --color-brand-100: #eef1e6;
+  --color-brand-gold: #c8a96a;
+
+  /* Objective accent colors — kept distinct from the core brand ramp above. */
+  --color-objective-perte: #6b8e5a;
+  --color-objective-equilibre: #c88a3d;
+  --color-objective-prise: #3a4a2e;
+  --color-objective-transformation: #4a7a8c;
 }
 
 @theme inline {
@@ -32,7 +38,12 @@
   --color-brand-200: var(--color-brand-200);
   --color-brand-100: var(--color-brand-100);
   --color-brand-gold: var(--color-brand-gold);
-  --font-sans: var(--font-jakarta);
+  --color-objective-perte: var(--color-objective-perte);
+  --color-objective-equilibre: var(--color-objective-equilibre);
+  --color-objective-prise: var(--color-objective-prise);
+  --color-objective-transformation: var(--color-objective-transformation);
+  --font-sans: var(--font-lato);
+  --font-display: var(--font-playfair);
 }
 
 body {

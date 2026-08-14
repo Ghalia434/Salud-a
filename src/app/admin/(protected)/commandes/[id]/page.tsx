@@ -27,6 +27,24 @@ export default async function AdminOrderDetailPage({
     : { data: [] };
   const mealNameById = new Map((meals ?? []).map((m) => [m.id, m.name]));
 
+  const { data: orderExtras } = await supabase
+    .from("order_extras")
+    .select("extra_id, quantity, is_gift")
+    .eq("order_id", order.id);
+
+  const extraIds = (orderExtras ?? []).map((e) => e.extra_id);
+  const { data: extras } = extraIds.length
+    ? await supabase.from("extras").select("id, name, price").in("id", extraIds)
+    : { data: [] };
+  const extraById = new Map((extras ?? []).map((e) => [e.id, e]));
+
+  const gifts = (orderExtras ?? []).filter((e) => e.is_gift);
+  const paidExtras = (orderExtras ?? []).filter((e) => !e.is_gift);
+  const extrasTotal = paidExtras.reduce((sum, e) => {
+    const extra = extraById.get(e.extra_id);
+    return sum + (extra ? extra.price * e.quantity : 0);
+  }, 0);
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="flex items-center justify-between">
@@ -46,7 +64,7 @@ export default async function AdminOrderDetailPage({
         <p className="text-brand-800">{order.full_name}</p>
         <p className="text-brand-600">{order.phone}</p>
         <Link
-          href={`/admin/clients/${order.user_id}`}
+          href={`/admin/clients/${encodeURIComponent(order.phone)}`}
           className="text-sm font-semibold text-brand-700 underline"
         >
           Voir la fiche client
@@ -75,17 +93,58 @@ export default async function AdminOrderDetailPage({
           ))}
         </ul>
 
-        {(order.gift_detox || order.gift_gourmandise || order.free_delivery) && (
-          <ul className="mt-2 space-y-1 text-sm text-brand-600">
-            {order.gift_detox && <li>+ Boisson détox offerte</li>}
-            {order.gift_gourmandise && <li>+ Gourmandise offerte</li>}
-            {order.free_delivery && <li>+ Livraison gratuite</li>}
-          </ul>
+        {(gifts.length > 0 || paidExtras.length > 0) && (
+          <>
+            <h2 className="mt-4 text-sm font-semibold uppercase tracking-wide text-brand-500">
+              Extras
+            </h2>
+            <ul className="mt-1 space-y-1">
+              {gifts.map((g) => (
+                <li key={g.extra_id} className="flex justify-between text-brand-800">
+                  <span>
+                    {g.quantity}× {extraById.get(g.extra_id)?.name ?? "Extra supprimé"}
+                  </span>
+                  <span className="text-brand-500">Offert</span>
+                </li>
+              ))}
+              {paidExtras.map((e) => {
+                const extra = extraById.get(e.extra_id);
+                return (
+                  <li key={e.extra_id} className="flex justify-between text-brand-800">
+                    <span>
+                      {e.quantity}× {extra?.name ?? "Extra supprimé"}
+                    </span>
+                    <span>{formatPrice((extra?.price ?? 0) * e.quantity)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
 
-        <div className="mt-6 flex items-center justify-between border-t border-brand-200 pt-4 text-lg font-bold text-brand-800">
-          <span>Total</span>
-          <span>{formatPrice(order.pack_price)}</span>
+        {order.free_delivery && (
+          <p className="mt-2 text-sm text-brand-600">+ Livraison gratuite</p>
+        )}
+
+        <div className="mt-6 space-y-1 border-t border-brand-200 pt-4">
+          <div className="flex items-center justify-between text-brand-700">
+            <span>Formule</span>
+            <span>{formatPrice(order.pack_price)}</span>
+          </div>
+          {extrasTotal > 0 && (
+            <div className="flex items-center justify-between text-brand-700">
+              <span>Extras</span>
+              <span>{formatPrice(extrasTotal)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between text-brand-700">
+            <span>Livraison ({order.city})</span>
+            <span>{formatPrice(order.delivery_fee)}</span>
+          </div>
+          <div className="flex items-center justify-between pt-2 text-lg font-bold text-brand-800">
+            <span>Total</span>
+            <span>{formatPrice(order.pack_price + extrasTotal + order.delivery_fee)}</span>
+          </div>
         </div>
       </div>
     </div>

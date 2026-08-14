@@ -4,44 +4,86 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { useCartStore } from "@/lib/cart-store";
-import { PROGRAMS, CITY } from "@/lib/constants";
+import { useCartStore, type CartDelivery } from "@/lib/cart-store";
+import { PROGRAMS } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
-import type { Database } from "@/lib/database.types";
+import type { Database, ProgramType } from "@/lib/database.types";
 
 type Meal = Database["public"]["Tables"]["meals"]["Row"];
+type Extra = Database["public"]["Tables"]["extras"]["Row"];
+
+interface Receipt {
+  orderNumber: string;
+  createdAt: Date;
+  program: ProgramType;
+  packPlates: number;
+  packPrice: number;
+  deliveryFee: number;
+  items: { name: string; quantity: number }[];
+  paidExtras: { name: string; quantity: number; price: number }[];
+  giftNames: string[];
+  delivery: CartDelivery;
+}
 
 export default function ConfirmationPage() {
   const router = useRouter();
   const program = useCartStore((s) => s.program);
   const pack = useCartStore((s) => s.pack);
   const items = useCartStore((s) => s.items);
+  const extrasQty = useCartStore((s) => s.extras);
+  const giftDetoxId = useCartStore((s) => s.giftDetoxId);
+  const giftGourmandiseId = useCartStore((s) => s.giftGourmandiseId);
   const delivery = useCartStore((s) => s.delivery);
   const reset = useCartStore((s) => s.reset);
 
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [extras, setExtras] = useState<Extra[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<Receipt | null>(null);
 
   useEffect(() => {
+    // Once an order is confirmed, the cart is reset (program/pack/delivery
+    // become null) — that must not trigger the "no cart, go back" redirect.
+    if (receipt) return;
+
     if (!program || !pack || !delivery) {
       router.replace("/commander/objectif");
       return;
     }
 
-    const ids = Object.keys(items);
-    if (ids.length === 0) return;
-
     const supabase = createClient();
-    supabase
-      .from("meals")
-      .select("*")
-      .in("id", ids)
-      .then(({ data }) => setMeals(data ?? []));
-    // items intentionally excluded: only needs to refetch when the id set changes.
+
+    const ids = Object.keys(items);
+    if (ids.length > 0) {
+      supabase
+        .from("meals")
+        .select("*")
+        .in("id", ids)
+        .then(({ data }) => setMeals(data ?? []));
+    }
+
+    const extraIds = [
+      ...Object.keys(extrasQty),
+      ...(giftDetoxId ? [giftDetoxId] : []),
+      ...(giftGourmandiseId ? [giftGourmandiseId] : []),
+    ];
+    if (extraIds.length > 0) {
+      supabase
+        .from("extras")
+        .select("*")
+        .in("id", extraIds)
+        .then(({ data }) => setExtras(data ?? []));
+    }
+    // items/extrasQty/gift ids intentionally excluded: only needs to refetch
+    // when the id sets change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [program, pack, delivery, router]);
+  }, [program, pack, delivery, router, receipt]);
+
+  const extrasTotal = Object.entries(extrasQty).reduce((sum, [extraId, qty]) => {
+    const extra = extras.find((e) => e.id === extraId);
+    return sum + (extra ? extra.price * qty : 0);
+  }, 0);
 
   async function confirmOrder() {
     if (!program || !pack || !delivery) return;
@@ -49,93 +91,217 @@ export default function ConfirmationPage() {
     setError(null);
 
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (!user) {
-      setError("Votre session a expiré, merci de revérifier votre numéro.");
+    const extrasPayload = [
+      ...Object.entries(extrasQty).map(([extra_id, quantity]) => ({
+        extra_id,
+        quantity,
+        is_gift: false,
+      })),
+      ...(giftDetoxId ? [{ extra_id: giftDetoxId, quantity: 1, is_gift: true }] : []),
+      ...(giftGourmandiseId
+        ? [{ extra_id: giftGourmandiseId, quantity: 1, is_gift: true }]
+        : []),
+    ];
+
+    const { data, error: rpcError } = await supabase.rpc("create_order", {
+      p_program: program,
+      p_pack_plates: pack.plates,
+      p_pack_price: pack.price,
+      p_delivery_fee: delivery.deliveryFee,
+      p_full_name: delivery.fullName,
+      p_phone: delivery.phone,
+      p_address: delivery.address,
+      p_quartier: delivery.quartier,
+      p_city: delivery.city,
+      p_gift_detox: pack.giftDetox,
+      p_gift_gourmandise: pack.giftGourmandise,
+      p_free_delivery: pack.freeDelivery,
+      p_items: Object.entries(items).map(([meal_id, quantity]) => ({
+        meal_id,
+        quantity,
+      })),
+      p_extras: extrasPayload,
+    });
+
+    const created = data?.[0];
+
+    if (rpcError || !created) {
+      setError(rpcError?.message ?? "Impossible de créer la commande.");
       setSubmitting(false);
       return;
     }
 
-    await supabase
-      .from("profiles")
-      .update({
-        full_name: delivery.fullName,
-        phone: delivery.phone,
-        address: delivery.address,
-        quartier: delivery.quartier,
-        city: CITY,
-      })
-      .eq("id", user.id);
+    const giftDetox = extras.find((e) => e.id === giftDetoxId);
+    const giftGourmandise = extras.find((e) => e.id === giftGourmandiseId);
 
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .insert({
-        user_id: user.id,
-        program,
-        pack_plates: pack.plates,
-        pack_price: pack.price,
-        full_name: delivery.fullName,
-        phone: delivery.phone,
-        address: delivery.address,
-        quartier: delivery.quartier,
-        city: CITY,
-        gift_detox: pack.giftDetox,
-        gift_gourmandise: pack.giftGourmandise,
-        free_delivery: pack.freeDelivery,
-      })
-      .select()
-      .single();
-
-    if (orderError || !order) {
-      setError(orderError?.message ?? "Impossible de créer la commande.");
-      setSubmitting(false);
-      return;
-    }
-
-    const orderItems = Object.entries(items).map(([mealId, quantity]) => ({
-      order_id: order.id,
-      meal_id: mealId,
-      quantity,
-    }));
-
-    const { error: itemsError } = await supabase
-      .from("order_items")
-      .insert(orderItems);
-
-    if (itemsError) {
-      setError(itemsError.message);
-      setSubmitting(false);
-      return;
-    }
-
-    setOrderNumber(order.order_number);
+    // Snapshot everything needed for the receipt before reset() clears the cart.
+    setReceipt({
+      orderNumber: created.order_number,
+      createdAt: new Date(),
+      program,
+      packPlates: pack.plates,
+      packPrice: pack.price,
+      deliveryFee: delivery.deliveryFee,
+      items: Object.entries(items).map(([mealId, quantity]) => ({
+        name: meals.find((m) => m.id === mealId)?.name ?? "Repas",
+        quantity,
+      })),
+      paidExtras: Object.entries(extrasQty).map(([extraId, quantity]) => {
+        const extra = extras.find((e) => e.id === extraId);
+        return {
+          name: extra?.name ?? "Extra",
+          quantity,
+          price: (extra?.price ?? 0) * quantity,
+        };
+      }),
+      giftNames: [giftDetox?.name, giftGourmandise?.name].filter(
+        (n): n is string => Boolean(n)
+      ),
+      delivery,
+    });
     reset();
     setSubmitting(false);
   }
 
-  if (orderNumber) {
+  if (receipt) {
     return (
-      <div className="mx-auto max-w-md text-center">
-        <h1 className="text-3xl font-bold text-brand-800">Commande confirmée !</h1>
-        <p className="mt-4 text-brand-600">
-          Votre numéro de commande est
-        </p>
-        <p className="mt-2 text-2xl font-bold text-brand-700">{orderNumber}</p>
-        <p className="mt-4 text-sm text-brand-600">
-          Paiement à la livraison. Vous serez livré dimanche à l&apos;adresse
-          indiquée.
-        </p>
-        <div className="mt-8 flex justify-center gap-4">
+      <div className="mx-auto max-w-md">
+        <div className="text-center">
+          <h1 className="font-display text-3xl font-bold text-brand-800">
+            Commande confirmée !
+          </h1>
+          <p className="mt-2 text-sm text-brand-600">
+            Notre équipe vous contactera par WhatsApp pour confirmer et suivre votre
+            commande.
+          </p>
+        </div>
+
+        <div
+          id="receipt"
+          className="mt-8 rounded-2xl border border-brand-200 bg-white p-6 print:border-none print:shadow-none"
+        >
+          <div className="flex items-center justify-between border-b border-dashed border-brand-200 pb-4">
+            <div>
+              <p className="font-display text-lg font-bold text-brand-800">Saludèa</p>
+              <p className="text-xs text-brand-500">Reçu de commande</p>
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-brand-800">{receipt.orderNumber}</p>
+              <p className="text-xs text-brand-500">
+                {receipt.createdAt.toLocaleDateString("fr-FR", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                })}{" "}
+                à{" "}
+                {receipt.createdAt.toLocaleTimeString("fr-FR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-brand-500">
+              Objectif
+            </h2>
+            <p className="text-brand-800">{PROGRAMS[receipt.program].label}</p>
+          </div>
+
+          <div className="mt-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-brand-500">
+              Repas ({receipt.packPlates} plats)
+            </h2>
+            <ul className="mt-1 space-y-1">
+              {receipt.items.map((item, i) => (
+                <li key={i} className="text-brand-800">
+                  {item.quantity}× {item.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {(receipt.paidExtras.length > 0 || receipt.giftNames.length > 0) && (
+            <div className="mt-4">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-brand-500">
+                Extras
+              </h2>
+              <ul className="mt-1 space-y-1">
+                {receipt.giftNames.map((name, i) => (
+                  <li key={i} className="flex justify-between text-brand-800">
+                    <span>1× {name}</span>
+                    <span className="text-brand-500">Offert</span>
+                  </li>
+                ))}
+                {receipt.paidExtras.map((item, i) => (
+                  <li key={i} className="flex justify-between text-brand-800">
+                    <span>
+                      {item.quantity}× {item.name}
+                    </span>
+                    <span>{formatPrice(item.price)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-brand-500">
+              Livraison
+            </h2>
+            <p className="text-brand-800">{receipt.delivery.fullName}</p>
+            <p className="text-brand-600">
+              {receipt.delivery.address}, {receipt.delivery.quartier},{" "}
+              {receipt.delivery.city}
+            </p>
+            <p className="text-brand-600">{receipt.delivery.phone}</p>
+            <p className="mt-1 text-xs text-brand-500">
+              Livraison le lundi ou le jeudi suivant.
+            </p>
+          </div>
+
+          <div className="mt-4 space-y-1 border-t border-dashed border-brand-200 pt-4">
+            <div className="flex items-center justify-between text-brand-700">
+              <span>Formule</span>
+              <span>{formatPrice(receipt.packPrice)}</span>
+            </div>
+            {receipt.paidExtras.length > 0 && (
+              <div className="flex items-center justify-between text-brand-700">
+                <span>Extras</span>
+                <span>
+                  {formatPrice(
+                    receipt.paidExtras.reduce((sum, e) => sum + e.price, 0)
+                  )}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-brand-700">
+              <span>Livraison</span>
+              <span>{formatPrice(receipt.deliveryFee)}</span>
+            </div>
+            <div className="flex items-center justify-between pt-2 text-lg font-bold text-brand-800">
+              <span>Total</span>
+              <span>
+                {formatPrice(
+                  receipt.packPrice +
+                    receipt.paidExtras.reduce((sum, e) => sum + e.price, 0) +
+                    receipt.deliveryFee
+                )}
+              </span>
+            </div>
+          </div>
+          <p className="mt-3 text-center text-xs text-brand-500">
+            Paiement à la livraison uniquement.
+          </p>
+        </div>
+
+        <div className="mt-8 flex justify-center gap-4 print:hidden">
           <Link
-            href="/compte"
+            href="/"
             className="rounded-full bg-brand-700 px-6 py-3 font-semibold text-white"
           >
-            Voir mes commandes
-          </Link>
-          <Link href="/" className="rounded-full border border-brand-300 px-6 py-3 font-semibold text-brand-700">
             Retour à l&apos;accueil
           </Link>
         </div>
@@ -145,9 +311,15 @@ export default function ConfirmationPage() {
 
   if (!program || !pack || !delivery) return null;
 
+  const giftDetox = extras.find((e) => e.id === giftDetoxId);
+  const giftGourmandise = extras.find((e) => e.id === giftGourmandiseId);
+  const paidExtras = Object.entries(extrasQty)
+    .map(([extraId, qty]) => ({ extra: extras.find((e) => e.id === extraId), qty }))
+    .filter((e) => e.extra && e.qty > 0);
+
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-3xl font-bold text-brand-800">Récapitulatif</h1>
+      <h1 className="font-display text-3xl font-bold text-brand-800">Récapitulatif</h1>
 
       {error && (
         <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -176,20 +348,69 @@ export default function ConfirmationPage() {
           </ul>
         </div>
 
+        {(paidExtras.length > 0 || giftDetox || giftGourmandise) && (
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-500">
+              Extras
+            </h2>
+            <ul className="mt-1 space-y-1">
+              {giftDetox && (
+                <li className="flex justify-between text-brand-800">
+                  <span>1× {giftDetox.name}</span>
+                  <span className="text-brand-500">Offert</span>
+                </li>
+              )}
+              {giftGourmandise && (
+                <li className="flex justify-between text-brand-800">
+                  <span>1× {giftGourmandise.name}</span>
+                  <span className="text-brand-500">Offert</span>
+                </li>
+              )}
+              {paidExtras.map(({ extra, qty }) => {
+                if (!extra) return null;
+                return (
+                  <li key={extra.id} className="flex justify-between text-brand-800">
+                    <span>
+                      {qty}× {extra.name}
+                    </span>
+                    <span>{formatPrice(extra.price * qty)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-500">
             Livraison
           </h2>
           <p className="text-brand-800">{delivery.fullName}</p>
           <p className="text-brand-600">
-            {delivery.address}, {delivery.quartier}, {CITY}
+            {delivery.address}, {delivery.quartier}, {delivery.city}
           </p>
           <p className="text-brand-600">{delivery.phone}</p>
         </div>
 
-        <div className="flex items-center justify-between border-t border-brand-200 pt-4 text-lg font-bold text-brand-800">
-          <span>Total</span>
-          <span>{formatPrice(pack.price)}</span>
+        <div className="space-y-1 border-t border-brand-200 pt-4">
+          <div className="flex items-center justify-between text-brand-700">
+            <span>Formule ({pack.plates} plats)</span>
+            <span>{formatPrice(pack.price)}</span>
+          </div>
+          {extrasTotal > 0 && (
+            <div className="flex items-center justify-between text-brand-700">
+              <span>Extras</span>
+              <span>{formatPrice(extrasTotal)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between text-brand-700">
+            <span>Livraison ({delivery.city})</span>
+            <span>{formatPrice(delivery.deliveryFee)}</span>
+          </div>
+          <div className="flex items-center justify-between pt-2 text-lg font-bold text-brand-800">
+            <span>Total</span>
+            <span>{formatPrice(pack.price + extrasTotal + delivery.deliveryFee)}</span>
+          </div>
         </div>
         <p className="text-sm text-brand-600">Paiement à la livraison uniquement.</p>
       </div>

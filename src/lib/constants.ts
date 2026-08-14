@@ -31,13 +31,50 @@ export const PROGRAMS: Record<
     calories: 750,
     protein: 45,
   },
+  transformation_corporelle: {
+    label: "Transformation corporelle",
+    tagline: "Transformez votre corps durablement.",
+    description: "Des repas complets pensés pour accompagner une transformation en profondeur.",
+    calories: 550,
+    protein: 40,
+  },
 };
 
 export const PROGRAM_ORDER: ProgramType[] = [
   "perte_de_poids",
   "equilibre",
   "prise_de_masse",
+  "transformation_corporelle",
 ];
+
+// Literal Tailwind class names per program (Tailwind's scanner needs the
+// full class string to appear somewhere in source — can't be built from a
+// dynamic `objective-${key}` template).
+export const PROGRAM_STYLES: Record<
+  ProgramType,
+  { badgeBg: string; iconText: string; ring: string }
+> = {
+  perte_de_poids: {
+    badgeBg: "bg-objective-perte/15",
+    iconText: "text-objective-perte",
+    ring: "border-objective-perte/30",
+  },
+  equilibre: {
+    badgeBg: "bg-objective-equilibre/15",
+    iconText: "text-objective-equilibre",
+    ring: "border-objective-equilibre/30",
+  },
+  prise_de_masse: {
+    badgeBg: "bg-objective-prise/10",
+    iconText: "text-objective-prise",
+    ring: "border-objective-prise/30",
+  },
+  transformation_corporelle: {
+    badgeBg: "bg-objective-transformation/15",
+    iconText: "text-objective-transformation",
+    ring: "border-objective-transformation/30",
+  },
+};
 
 export const ORDER_STATUS_LABELS: Record<
   OrderStatus,
@@ -63,8 +100,13 @@ export const ORDER_STATUS_LABELS: Record<
     label: "Livrée",
     className: "bg-green-100 text-green-800",
   },
+  annulee: {
+    label: "Annulée",
+    className: "bg-red-100 text-red-800",
+  },
 };
 
+// The normal linear progression, used for the client-facing step tracker.
 export const ORDER_STATUS_FLOW: OrderStatus[] = [
   "en_attente",
   "confirmee",
@@ -73,6 +115,19 @@ export const ORDER_STATUS_FLOW: OrderStatus[] = [
   "livree",
 ];
 
-export const CITY = "Casablanca";
+// Every status an admin can set on an order — the flow above plus the
+// terminal "annulée" exception state.
+export const ALL_ORDER_STATUSES: OrderStatus[] = [...ORDER_STATUS_FLOW, "annulee"];
+
+export const DELIVERY_CITIES = [
+  { label: "Casablanca", fee: 20 },
+  { label: "Bouskoura", fee: 35 },
+] as const;
+
+export type DeliveryCity = (typeof DELIVERY_CITIES)[number]["label"];
+
+export function deliveryFeeFor(city: string): number {
+  return DELIVERY_CITIES.find((c) => c.label === city)?.fee ?? 0;
+}
 
 export const WHATSAPP_NUMBER = "+212693401564";

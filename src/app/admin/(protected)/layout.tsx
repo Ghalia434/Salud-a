@@ -43,6 +43,9 @@ export default async function AdminLayout({
           <Link href="/admin/repas" className="hover:text-white">
             Repas
           </Link>
+          <Link href="/admin/extras" className="hover:text-white">
+            Extras
+          </Link>
           <Link href="/admin/commandes" className="hover:text-white">
             Commandes
           </Link>

@@ -136,11 +136,11 @@ export default function RepasPage() {
             : `Encore ${remaining} plat${remaining > 1 ? "s" : ""} à choisir`}
         </span>
         <button
-          onClick={() => router.push("/commander/panier")}
+          onClick={() => router.push("/commander/extras")}
           disabled={!complete}
           className="rounded-full bg-brand-700 px-8 py-3 font-semibold text-white shadow disabled:opacity-30"
         >
-          Voir le panier
+          Continuer
         </button>
       </div>
     </div>

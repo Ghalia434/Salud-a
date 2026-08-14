@@ -15,17 +15,40 @@ async function countOrders(
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
 
-  const [totalOrders, totalClients, enAttente, enPreparation, livree, allOrders] =
+  const [totalOrders, clientPhones, enAttente, enPreparation, livree, allOrders] =
     await Promise.all([
       countOrders(supabase),
-      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "client"),
+      supabase.from("orders").select("phone"),
       countOrders(supabase, "en_attente"),
       countOrders(supabase, "en_preparation"),
       countOrders(supabase, "livree"),
-      supabase.from("orders").select("pack_price"),
+      supabase.from("orders").select("pack_price, delivery_fee"),
     ]);
 
-  const revenue = (allOrders.data ?? []).reduce((sum, o) => sum + o.pack_price, 0);
+  const totalClients = new Set((clientPhones.data ?? []).map((o) => o.phone)).size;
+
+  const orderRevenue = (allOrders.data ?? []).reduce(
+    (sum, o) => sum + o.pack_price + o.delivery_fee,
+    0
+  );
+
+  const { data: paidOrderExtras } = await supabase
+    .from("order_extras")
+    .select("extra_id, quantity")
+    .eq("is_gift", false);
+
+  const extraIds = [...new Set((paidOrderExtras ?? []).map((e) => e.extra_id))];
+  const { data: extraPrices } = extraIds.length
+    ? await supabase.from("extras").select("id, price").in("id", extraIds)
+    : { data: [] };
+  const priceByExtraId = new Map((extraPrices ?? []).map((e) => [e.id, e.price]));
+
+  const extrasRevenue = (paidOrderExtras ?? []).reduce(
+    (sum, e) => sum + (priceByExtraId.get(e.extra_id) ?? 0) * e.quantity,
+    0
+  );
+
+  const revenue = orderRevenue + extrasRevenue;
 
   const { data: orderItems } = await supabase
     .from("order_items")
@@ -50,7 +73,7 @@ export default async function AdminDashboardPage() {
 
   const stats = [
     { label: "Commandes totales", value: totalOrders },
-    { label: "Clients", value: totalClients.count ?? 0 },
+    { label: "Clients", value: totalClients },
     { label: "En attente", value: enAttente },
     { label: "En préparation", value: enPreparation },
     { label: "Livrées", value: livree },
