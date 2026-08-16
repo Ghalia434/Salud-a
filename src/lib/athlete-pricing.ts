@@ -1,14 +1,17 @@
-import { ATHLETE_PRICING } from "@/lib/constants";
+import { ATHLETE_PRICING, EXTRA_SAUCE_PRICE } from "@/lib/constants";
 import type { AthleteCustomization } from "@/lib/cart-store";
 import type { Database } from "@/lib/database.types";
 
 type MealLabels = Pick<
   Database["public"]["Tables"]["meals"]["Row"],
-  "protein_label" | "starch_label"
+  "protein_label" | "starch_label" | "veg_label"
 >;
 
-// Meals with no protein_label/starch_label (e.g. Salade exotique) are priced
-// as a single vegetable-rate component using only vegGrams.
+// Each component (protein/starch/veg) only counts toward the price — and
+// only appears in the portions UI — when the meal actually has that real
+// ingredient (e.g. Salade exotique has veg_label but no protein_label).
+// Extra sauce is priced separately (see mealSauceTotal) since it's offered
+// across every objective, not just Formule Athlète.
 export function computeAthleteMealUnitPrice(
   meal: MealLabels,
   c: AthleteCustomization
@@ -20,8 +23,19 @@ export function computeAthleteMealUnitPrice(
   if (meal.starch_label && c.starchGrams) {
     total += c.starchGrams * ATHLETE_PRICING.starchRatePerGram;
   }
-  total += c.vegGrams * ATHLETE_PRICING.vegRatePerGram;
-  total += c.extraVegGrams * ATHLETE_PRICING.vegRatePerGram;
-  if (c.sauce) total += ATHLETE_PRICING.saucePrice;
+  if (meal.veg_label) {
+    total += c.vegGrams * ATHLETE_PRICING.vegRatePerGram;
+  }
   return Math.round(total * 100) / 100;
+}
+
+// Total cost of "extra sauce" add-ons across selected meals, scaled by each
+// meal's quantity — shared by every objective's panier/récapitulatif.
+export function mealSauceTotal(
+  items: Record<string, number>,
+  mealSauces: Record<string, boolean>
+): number {
+  return Object.entries(items).reduce((sum, [mealId, qty]) => {
+    return sum + (mealSauces[mealId] ? EXTRA_SAUCE_PRICE * qty : 0);
+  }, 0);
 }

@@ -50,6 +50,8 @@ export interface Database {
           available: boolean;
           protein_label: string | null;
           starch_label: string | null;
+          veg_label: string | null;
+          sauce_label: string | null;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["meals"]["Row"]>;
@@ -113,7 +115,6 @@ export interface Database {
           protein_grams: number | null;
           starch_grams: number | null;
           veg_grams: number | null;
-          extra_veg_grams: number | null;
           sauce: boolean;
           unit_price: number | null;
         };
@@ -180,7 +181,6 @@ export interface Database {
             protein_grams?: number;
             starch_grams?: number;
             veg_grams?: number;
-            extra_veg_grams?: number;
             sauce?: boolean;
             unit_price?: number;
           }[];

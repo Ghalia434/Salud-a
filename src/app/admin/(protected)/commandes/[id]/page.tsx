@@ -18,16 +18,14 @@ export default async function AdminOrderDetailPage({
 
   const { data: orderItems } = await supabase
     .from("order_items")
-    .select(
-      "meal_id, quantity, protein_grams, starch_grams, veg_grams, extra_veg_grams, sauce, unit_price"
-    )
+    .select("meal_id, quantity, protein_grams, starch_grams, veg_grams, sauce, unit_price")
     .eq("order_id", order.id);
 
   const mealIds = (orderItems ?? []).map((i) => i.meal_id);
   const { data: meals } = mealIds.length
     ? await supabase
         .from("meals")
-        .select("id, name, protein_label, starch_label")
+        .select("id, name, protein_label, starch_label, veg_label, sauce_label")
         .in("id", mealIds)
     : { data: [] };
   const mealById = new Map((meals ?? []).map((m) => [m.id, m]));
@@ -50,6 +48,17 @@ export default async function AdminOrderDetailPage({
     const extra = extraById.get(e.extra_id);
     return sum + (extra ? extra.price * e.quantity : 0);
   }, 0);
+
+  const isAthlete = order.program === "athlete";
+  // For Athlete orders the sauce surcharge is already folded into
+  // order.pack_price (the computed per-gram total); for every other
+  // objective it's a separate add-on tracked per order_item.
+  const sauceTotal = isAthlete
+    ? 0
+    : (orderItems ?? []).reduce(
+        (sum, item) => sum + (item.sauce ? (item.unit_price ?? 0) * item.quantity : 0),
+        0
+      );
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -94,7 +103,8 @@ export default async function AdminOrderDetailPage({
         <ul className="mt-1 space-y-1">
           {orderItems?.map((item) => {
             const meal = mealById.get(item.meal_id);
-            const isCustomized = item.veg_grams !== null;
+            const isCustomized =
+              item.protein_grams !== null || item.starch_grams !== null || item.veg_grams !== null;
             const parts: string[] = [];
             if (meal?.protein_label && item.protein_grams) {
               parts.push(`${meal.protein_label} ${item.protein_grams}g`);
@@ -102,22 +112,21 @@ export default async function AdminOrderDetailPage({
             if (meal?.starch_label && item.starch_grams) {
               parts.push(`${meal.starch_label} ${item.starch_grams}g`);
             }
-            if (item.veg_grams) parts.push(`Légumes ${item.veg_grams}g`);
-            if (item.extra_veg_grams) parts.push(`+${item.extra_veg_grams}g légumes`);
-            if (item.sauce) parts.push("Sauce");
+            if (meal?.veg_label && item.veg_grams) {
+              parts.push(`${meal.veg_label} ${item.veg_grams}g`);
+            }
+            if (item.sauce && meal?.sauce_label) parts.push(`Extra ${meal.sauce_label}`);
             return (
               <li key={item.meal_id} className="text-brand-800">
                 <div className="flex justify-between">
                   <span>
                     {item.quantity}× {mealNameById.get(item.meal_id) ?? "Repas supprimé"}
                   </span>
-                  {isCustomized && item.unit_price !== null && (
+                  {(isCustomized || item.sauce) && item.unit_price !== null && (
                     <span>{formatPrice(item.unit_price * item.quantity)}</span>
                   )}
                 </div>
-                {isCustomized && parts.length > 0 && (
-                  <p className="text-xs text-brand-500">{parts.join(" · ")}</p>
-                )}
+                {parts.length > 0 && <p className="text-xs text-brand-500">{parts.join(" · ")}</p>}
               </li>
             );
           })}
@@ -158,9 +167,15 @@ export default async function AdminOrderDetailPage({
 
         <div className="mt-6 space-y-1 border-t border-brand-200 pt-4">
           <div className="flex items-center justify-between text-brand-700">
-            <span>{order.program === "athlete" ? "Repas personnalisés" : "Formule"}</span>
+            <span>{isAthlete ? "Repas personnalisés" : "Formule"}</span>
             <span>{formatPrice(order.pack_price)}</span>
           </div>
+          {sauceTotal > 0 && (
+            <div className="flex items-center justify-between text-brand-700">
+              <span>Sauces supplémentaires</span>
+              <span>{formatPrice(sauceTotal)}</span>
+            </div>
+          )}
           {extrasTotal > 0 && (
             <div className="flex items-center justify-between text-brand-700">
               <span>Extras</span>
@@ -173,7 +188,9 @@ export default async function AdminOrderDetailPage({
           </div>
           <div className="flex items-center justify-between pt-2 text-lg font-bold text-brand-800">
             <span>Total</span>
-            <span>{formatPrice(order.pack_price + extrasTotal + order.delivery_fee)}</span>
+            <span>
+              {formatPrice(order.pack_price + sauceTotal + extrasTotal + order.delivery_fee)}
+            </span>
           </div>
         </div>
       </div>

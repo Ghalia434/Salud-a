@@ -23,6 +23,8 @@ export function MealForm({ mealId }: { mealId?: string }) {
   const [program, setProgram] = useState<ProgramType>(DEFAULT_PROGRAM);
   const [proteinLabel, setProteinLabel] = useState("");
   const [starchLabel, setStarchLabel] = useState("");
+  const [vegLabel, setVegLabel] = useState("");
+  const [sauceLabel, setSauceLabel] = useState("");
   const [active, setActive] = useState(true);
   const [available, setAvailable] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -45,6 +47,8 @@ export function MealForm({ mealId }: { mealId?: string }) {
           setProgram(data.program);
           setProteinLabel(data.protein_label ?? "");
           setStarchLabel(data.starch_label ?? "");
+          setVegLabel(data.veg_label ?? "");
+          setSauceLabel(data.sauce_label ?? "");
           setActive(data.active);
           setAvailable(data.available);
           setPhotoUrl(data.photo_url);
@@ -88,6 +92,8 @@ export function MealForm({ mealId }: { mealId?: string }) {
       program,
       protein_label: proteinLabel || null,
       starch_label: starchLabel || null,
+      veg_label: vegLabel || null,
+      sauce_label: sauceLabel || null,
       active,
       available,
       photo_url: photoUrl,
@@ -194,8 +200,38 @@ export function MealForm({ mealId }: { mealId?: string }) {
         </label>
       </div>
       <p className="-mt-3 text-xs text-brand-500">
-        Laisser vide si le plat n&apos;a pas de composant dédié (ex : une salade) — il
-        sera alors facturé comme un seul composant légumes dans la Formule Athlète.
+        Laisser vide si le plat n&apos;a pas de composant dédié — il ne sera pas
+        proposé dans la personnalisation de la Formule Athlète.
+      </p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <label className="block">
+          <span className="text-sm font-semibold text-brand-700">
+            Légume du plat (Formule Athlète)
+          </span>
+          <input
+            type="text"
+            value={vegLabel}
+            onChange={(e) => setVegLabel(e.target.value)}
+            placeholder="Ex : Légumes frais"
+            className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-semibold text-brand-700">Nom de la sauce</span>
+          <input
+            type="text"
+            value={sauceLabel}
+            onChange={(e) => setSauceLabel(e.target.value)}
+            placeholder="Ex : Sauce datte"
+            className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
+          />
+        </label>
+      </div>
+      <p className="-mt-3 text-xs text-brand-500">
+        Le légume n&apos;apparaît que si ce plat en contient un vraiment. La sauce,
+        elle, est proposée en option payante (Extra sauce) sur toutes les formules —
+        laisser vide si ce plat n&apos;a pas de sauce.
       </p>
 
       <label className="flex items-center gap-2 text-sm font-semibold text-brand-700">

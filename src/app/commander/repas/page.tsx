@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/lib/cart-store";
+import { EXTRA_SAUCE_PRICE } from "@/lib/constants";
+import { formatPrice } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 
 type Meal = Database["public"]["Tables"]["meals"]["Row"];
@@ -17,6 +19,8 @@ export default function RepasPage() {
   const addMeal = useCartStore((s) => s.addMeal);
   const removeMeal = useCartStore((s) => s.removeMeal);
   const totalSelected = useCartStore((s) => s.totalSelected());
+  const mealSauces = useCartStore((s) => s.mealSauces);
+  const setMealSauce = useCartStore((s) => s.setMealSauce);
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +127,17 @@ export default function RepasPage() {
                     +
                   </button>
                 </div>
+                {program !== "athlete" && qty > 0 && meal.sauce_label && (
+                  <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-brand-700">
+                    <input
+                      type="checkbox"
+                      checked={mealSauces[meal.id] ?? false}
+                      onChange={(e) => setMealSauce(meal.id, e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-brand-300"
+                    />
+                    Extra {meal.sauce_label} (+{formatPrice(EXTRA_SAUCE_PRICE)})
+                  </label>
+                )}
               </div>
             </div>
           );

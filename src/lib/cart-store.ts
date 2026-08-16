@@ -28,16 +28,12 @@ export interface AthleteCustomization {
   proteinGrams: number | null;
   starchGrams: number | null;
   vegGrams: number;
-  extraVegGrams: number;
-  sauce: boolean;
 }
 
 export const DEFAULT_ATHLETE_CUSTOMIZATION: AthleteCustomization = {
   proteinGrams: 100,
   starchGrams: 100,
   vegGrams: 100,
-  extraVegGrams: 0,
-  sauce: false,
 };
 
 interface CartState {
@@ -49,6 +45,9 @@ interface CartState {
   giftGourmandiseId: string | null;
   delivery: CartDelivery | null;
   athleteCustomization: Record<string, AthleteCustomization>;
+  // "Extra sauce" add-on, keyed by mealId — available across every
+  // objective, not just Formule Athlète.
+  mealSauces: Record<string, boolean>;
   setProgram: (program: ProgramType) => void;
   setPack: (pack: CartPack) => void;
   addMeal: (mealId: string) => void;
@@ -61,6 +60,7 @@ interface CartState {
   setGiftGourmandiseId: (extraId: string | null) => void;
   setDelivery: (delivery: CartDelivery) => void;
   setAthleteCustomization: (mealId: string, customization: Partial<AthleteCustomization>) => void;
+  setMealSauce: (mealId: string, sauce: boolean) => void;
   totalSelected: () => number;
   reset: () => void;
 }
@@ -76,6 +76,7 @@ export const useCartStore = create<CartState>()(
       giftGourmandiseId: null,
       delivery: null,
       athleteCustomization: {},
+      mealSauces: {},
       setProgram: (program) =>
         set({
           program,
@@ -86,6 +87,7 @@ export const useCartStore = create<CartState>()(
           giftGourmandiseId: null,
           delivery: null,
           athleteCustomization: {},
+          mealSauces: {},
         }),
       setPack: (pack) =>
         set({
@@ -95,6 +97,7 @@ export const useCartStore = create<CartState>()(
           giftDetoxId: null,
           giftGourmandiseId: null,
           athleteCustomization: {},
+          mealSauces: {},
         }),
       addMeal: (mealId) =>
         set((state) => {
@@ -159,6 +162,8 @@ export const useCartStore = create<CartState>()(
             },
           },
         })),
+      setMealSauce: (mealId, sauce) =>
+        set((state) => ({ mealSauces: { ...state.mealSauces, [mealId]: sauce } })),
       totalSelected: () =>
         Object.values(get().items).reduce((sum, qty) => sum + qty, 0),
       reset: () =>
@@ -171,6 +176,7 @@ export const useCartStore = create<CartState>()(
           giftGourmandiseId: null,
           delivery: null,
           athleteCustomization: {},
+          mealSauces: {},
         }),
     }),
     { name: "saludea-cart" }

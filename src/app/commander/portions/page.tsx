@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore, DEFAULT_ATHLETE_CUSTOMIZATION } from "@/lib/cart-store";
-import { ATHLETE_PRICING } from "@/lib/constants";
-import { computeAthleteMealUnitPrice } from "@/lib/athlete-pricing";
+import { ATHLETE_PRICING, EXTRA_SAUCE_PRICE } from "@/lib/constants";
+import { computeAthleteMealUnitPrice, mealSauceTotal } from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 
@@ -20,6 +20,8 @@ export default function PortionsPage() {
   const totalSelected = useCartStore((s) => s.totalSelected());
   const athleteCustomization = useCartStore((s) => s.athleteCustomization);
   const setAthleteCustomization = useCartStore((s) => s.setAthleteCustomization);
+  const mealSauces = useCartStore((s) => s.mealSauces);
+  const setMealSauce = useCartStore((s) => s.setMealSauce);
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,11 +58,12 @@ export default function PortionsPage() {
 
   if (!program || program !== "athlete" || !pack) return null;
 
-  const grandTotal = meals.reduce((sum, meal) => {
-    const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
-    const qty = items[meal.id] ?? 0;
-    return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
-  }, 0);
+  const grandTotal =
+    meals.reduce((sum, meal) => {
+      const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+      const qty = items[meal.id] ?? 0;
+      return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
+    }, 0) + mealSauceTotal(items, mealSauces);
 
   return (
     <div>
@@ -78,7 +81,9 @@ export default function PortionsPage() {
         {meals.map((meal) => {
           const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
           const qty = items[meal.id] ?? 0;
-          const unitPrice = computeAthleteMealUnitPrice(meal, custom);
+          const hasSauce = mealSauces[meal.id] ?? false;
+          const unitPrice =
+            computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0);
           return (
             <div
               key={meal.id}
@@ -131,35 +136,29 @@ export default function PortionsPage() {
                     }
                   />
                 )}
-                <GramStepper
-                  label="Légumes"
-                  grams={custom.vegGrams}
-                  min={ATHLETE_PRICING.minGrams}
-                  step={ATHLETE_PRICING.gramStep}
-                  ratePerGram={ATHLETE_PRICING.vegRatePerGram}
-                  onChange={(vegGrams) => setAthleteCustomization(meal.id, { vegGrams })}
-                />
-                <GramStepper
-                  label="Légumes en plus"
-                  grams={custom.extraVegGrams}
-                  min={0}
-                  step={ATHLETE_PRICING.gramStep}
-                  ratePerGram={ATHLETE_PRICING.vegRatePerGram}
-                  onChange={(extraVegGrams) =>
-                    setAthleteCustomization(meal.id, { extraVegGrams })
-                  }
-                />
+                {meal.veg_label && (
+                  <GramStepper
+                    label={meal.veg_label}
+                    grams={custom.vegGrams}
+                    min={ATHLETE_PRICING.minGrams}
+                    step={ATHLETE_PRICING.gramStep}
+                    ratePerGram={ATHLETE_PRICING.vegRatePerGram}
+                    onChange={(vegGrams) => setAthleteCustomization(meal.id, { vegGrams })}
+                  />
+                )}
               </div>
 
-              <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-brand-700">
-                <input
-                  type="checkbox"
-                  checked={custom.sauce}
-                  onChange={(e) => setAthleteCustomization(meal.id, { sauce: e.target.checked })}
-                  className="h-4 w-4 rounded border-brand-300"
-                />
-                Ajouter une sauce (+{formatPrice(ATHLETE_PRICING.saucePrice)})
-              </label>
+              {meal.sauce_label && (
+                <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-brand-700">
+                  <input
+                    type="checkbox"
+                    checked={hasSauce}
+                    onChange={(e) => setMealSauce(meal.id, e.target.checked)}
+                    className="h-4 w-4 rounded border-brand-300"
+                  />
+                  Extra {meal.sauce_label} (+{formatPrice(EXTRA_SAUCE_PRICE)})
+                </label>
+              )}
             </div>
           );
         })}

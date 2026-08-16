@@ -158,7 +158,10 @@ export const ATHLETE_PRICING = {
   proteinRatePerGram: 0.22,
   starchRatePerGram: 0.18,
   vegRatePerGram: 0.06,
-  saucePrice: 8,
   minGrams: 100,
   gramStep: 10,
 } as const;
+
+// "Extra sauce" is each dish's own named sauce (meals.sauce_label), offered
+// as a paid add-on across every objective, not just Formule Athlète.
+export const EXTRA_SAUCE_PRICE = 8;

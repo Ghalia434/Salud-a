@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore, DEFAULT_ATHLETE_CUSTOMIZATION } from "@/lib/cart-store";
-import { PROGRAMS } from "@/lib/constants";
-import { computeAthleteMealUnitPrice } from "@/lib/athlete-pricing";
+import { PROGRAMS, EXTRA_SAUCE_PRICE } from "@/lib/constants";
+import { computeAthleteMealUnitPrice, mealSauceTotal } from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 
@@ -24,6 +24,7 @@ export default function PanierPage() {
   const giftDetoxId = useCartStore((s) => s.giftDetoxId);
   const giftGourmandiseId = useCartStore((s) => s.giftGourmandiseId);
   const athleteCustomization = useCartStore((s) => s.athleteCustomization);
+  const mealSauces = useCartStore((s) => s.mealSauces);
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [extras, setExtras] = useState<Extra[]>([]);
@@ -74,14 +75,15 @@ export default function PanierPage() {
     const extra = extras.find((e) => e.id === extraId);
     return sum + (extra ? extra.price * qty : 0);
   }, 0);
+  const sauceTotal = mealSauceTotal(items, mealSauces);
   const mealsTotal = isAthlete
     ? meals.reduce((sum, meal) => {
         const qty = items[meal.id] ?? 0;
         const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
         return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
-      }, 0)
+      }, 0) + sauceTotal
     : pack.price;
-  const total = mealsTotal + extrasTotal;
+  const total = mealsTotal + extrasTotal + (isAthlete ? 0 : sauceTotal);
 
   const giftDetox = extras.find((e) => e.id === giftDetoxId);
   const giftGourmandise = extras.find((e) => e.id === giftGourmandiseId);
@@ -117,13 +119,19 @@ export default function PanierPage() {
           const qty = items[meal.id] ?? 0;
           if (qty === 0) return null;
           const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
-          const unitPrice = isAthlete ? computeAthleteMealUnitPrice(meal, custom) : null;
+          const hasSauce = mealSauces[meal.id] ?? false;
+          const unitPrice = isAthlete
+            ? computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0)
+            : null;
           return (
             <li key={meal.id} className="flex items-center justify-between gap-4 p-4">
               <div>
                 <p className="font-semibold text-brand-800">{meal.name}</p>
                 {unitPrice !== null && (
                   <p className="text-xs text-brand-500">{formatPrice(unitPrice * qty)}</p>
+                )}
+                {!isAthlete && hasSauce && meal.sauce_label && (
+                  <p className="text-xs text-brand-500">Extra {meal.sauce_label}</p>
                 )}
               </div>
               <div className="flex items-center gap-3">
@@ -213,6 +221,12 @@ export default function PanierPage() {
             <span>{isAthlete ? `Repas personnalisés (${pack.plates} plats)` : `Formule (${pack.plates} plats)`}</span>
             <span>{formatPrice(mealsTotal)}</span>
           </div>
+          {!isAthlete && sauceTotal > 0 && (
+            <div className="flex items-center justify-between text-brand-700">
+              <span>Sauces supplémentaires</span>
+              <span>{formatPrice(sauceTotal)}</span>
+            </div>
+          )}
           {extrasTotal > 0 && (
             <div className="flex items-center justify-between text-brand-700">
               <span>Extras</span>

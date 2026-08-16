@@ -5,15 +5,19 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore, DEFAULT_ATHLETE_CUSTOMIZATION, type AthleteCustomization, type CartDelivery } from "@/lib/cart-store";
-import { PROGRAMS } from "@/lib/constants";
-import { computeAthleteMealUnitPrice } from "@/lib/athlete-pricing";
+import { PROGRAMS, EXTRA_SAUCE_PRICE } from "@/lib/constants";
+import { computeAthleteMealUnitPrice, mealSauceTotal } from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database, ProgramType } from "@/lib/database.types";
 
 type Meal = Database["public"]["Tables"]["meals"]["Row"];
 type Extra = Database["public"]["Tables"]["extras"]["Row"];
 
-function formatCustomizationLabel(meal: Meal, custom: AthleteCustomization): string {
+function formatCustomizationLabel(
+  meal: Meal,
+  custom: AthleteCustomization,
+  hasSauce: boolean
+): string {
   const parts: string[] = [];
   if (meal.protein_label && custom.proteinGrams) {
     parts.push(`${meal.protein_label} ${custom.proteinGrams}g`);
@@ -21,9 +25,8 @@ function formatCustomizationLabel(meal: Meal, custom: AthleteCustomization): str
   if (meal.starch_label && custom.starchGrams) {
     parts.push(`${meal.starch_label} ${custom.starchGrams}g`);
   }
-  parts.push(`Légumes ${custom.vegGrams}g`);
-  if (custom.extraVegGrams > 0) parts.push(`+${custom.extraVegGrams}g légumes`);
-  if (custom.sauce) parts.push("Sauce");
+  if (meal.veg_label) parts.push(`${meal.veg_label} ${custom.vegGrams}g`);
+  if (hasSauce && meal.sauce_label) parts.push(`Extra ${meal.sauce_label}`);
   return parts.join(" · ");
 }
 
@@ -34,6 +37,7 @@ interface Receipt {
   packPlates: number;
   packPrice: number;
   deliveryFee: number;
+  sauceTotal: number;
   items: { name: string; quantity: number; unitPrice?: number; customizationLabel?: string }[];
   paidExtras: { name: string; quantity: number; price: number }[];
   giftNames: string[];
@@ -50,6 +54,7 @@ export default function ConfirmationPage() {
   const giftGourmandiseId = useCartStore((s) => s.giftGourmandiseId);
   const delivery = useCartStore((s) => s.delivery);
   const athleteCustomization = useCartStore((s) => s.athleteCustomization);
+  const mealSauces = useCartStore((s) => s.mealSauces);
   const reset = useCartStore((s) => s.reset);
   const isAthlete = program === "athlete";
 
@@ -102,12 +107,13 @@ export default function ConfirmationPage() {
     return sum + (extra ? extra.price * qty : 0);
   }, 0);
 
+  const sauceTotal = mealSauceTotal(items, mealSauces);
   const mealsTotal = isAthlete
     ? meals.reduce((sum, meal) => {
         const qty = items[meal.id] ?? 0;
         const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
         return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
-      }, 0)
+      }, 0) + sauceTotal
     : pack?.price ?? 0;
 
   async function confirmOrder() {
@@ -143,7 +149,15 @@ export default function ConfirmationPage() {
       p_gift_gourmandise: pack.giftGourmandise,
       p_free_delivery: pack.freeDelivery,
       p_items: Object.entries(items).map(([meal_id, quantity]) => {
-        if (!isAthlete) return { meal_id, quantity };
+        const hasSauce = mealSauces[meal_id] ?? false;
+        if (!isAthlete) {
+          return {
+            meal_id,
+            quantity,
+            sauce: hasSauce,
+            unit_price: hasSauce ? EXTRA_SAUCE_PRICE : undefined,
+          };
+        }
         const meal = meals.find((m) => m.id === meal_id);
         const custom = athleteCustomization[meal_id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
         return {
@@ -152,9 +166,10 @@ export default function ConfirmationPage() {
           protein_grams: meal?.protein_label ? (custom.proteinGrams ?? undefined) : undefined,
           starch_grams: meal?.starch_label ? (custom.starchGrams ?? undefined) : undefined,
           veg_grams: custom.vegGrams,
-          extra_veg_grams: custom.extraVegGrams,
-          sauce: custom.sauce,
-          unit_price: meal ? computeAthleteMealUnitPrice(meal, custom) : undefined,
+          sauce: hasSauce,
+          unit_price: meal
+            ? computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0)
+            : undefined,
         };
       }),
       p_extras: extrasPayload,
@@ -179,17 +194,24 @@ export default function ConfirmationPage() {
       packPlates: pack.plates,
       packPrice: isAthlete ? Math.round(mealsTotal) : pack.price,
       deliveryFee: delivery.deliveryFee,
+      sauceTotal: isAthlete ? 0 : sauceTotal,
       items: Object.entries(items).map(([mealId, quantity]) => {
         const meal = meals.find((m) => m.id === mealId);
+        const hasSauce = mealSauces[mealId] ?? false;
         if (!isAthlete || !meal) {
-          return { name: meal?.name ?? "Repas", quantity };
+          return {
+            name: meal?.name ?? "Repas",
+            quantity,
+            customizationLabel:
+              hasSauce && meal?.sauce_label ? `Extra ${meal.sauce_label}` : undefined,
+          };
         }
         const custom = athleteCustomization[mealId] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
         return {
           name: meal.name,
           quantity,
-          unitPrice: computeAthleteMealUnitPrice(meal, custom),
-          customizationLabel: formatCustomizationLabel(meal, custom),
+          unitPrice: computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0),
+          customizationLabel: formatCustomizationLabel(meal, custom, hasSauce),
         };
       }),
       paidExtras: Object.entries(extrasQty).map(([extraId, quantity]) => {
@@ -322,6 +344,12 @@ export default function ConfirmationPage() {
               <span>{receipt.program === "athlete" ? "Repas personnalisés" : "Formule"}</span>
               <span>{formatPrice(receipt.packPrice)}</span>
             </div>
+            {receipt.sauceTotal > 0 && (
+              <div className="flex items-center justify-between text-brand-700">
+                <span>Sauces supplémentaires</span>
+                <span>{formatPrice(receipt.sauceTotal)}</span>
+              </div>
+            )}
             {receipt.paidExtras.length > 0 && (
               <div className="flex items-center justify-between text-brand-700">
                 <span>Extras</span>
@@ -341,6 +369,7 @@ export default function ConfirmationPage() {
               <span>
                 {formatPrice(
                   receipt.packPrice +
+                    receipt.sauceTotal +
                     receipt.paidExtras.reduce((sum, e) => sum + e.price, 0) +
                     receipt.deliveryFee
                 )}
@@ -397,24 +426,31 @@ export default function ConfirmationPage() {
           <ul className="mt-1 space-y-1">
             {meals.map((meal) => {
               const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+              const hasSauce = mealSauces[meal.id] ?? false;
+              const qty = items[meal.id] ?? 0;
               return (
                 <li key={meal.id} className="text-brand-800">
                   <div className="flex justify-between">
                     <span>
-                      {items[meal.id]}× {meal.name}
+                      {qty}× {meal.name}
                     </span>
                     {isAthlete && (
                       <span>
                         {formatPrice(
-                          computeAthleteMealUnitPrice(meal, custom) * (items[meal.id] ?? 0)
+                          (computeAthleteMealUnitPrice(meal, custom) +
+                            (hasSauce ? EXTRA_SAUCE_PRICE : 0)) *
+                            qty
                         )}
                       </span>
                     )}
                   </div>
                   {isAthlete && (
                     <p className="text-xs text-brand-500">
-                      {formatCustomizationLabel(meal, custom)}
+                      {formatCustomizationLabel(meal, custom, hasSauce)}
                     </p>
+                  )}
+                  {!isAthlete && hasSauce && meal.sauce_label && (
+                    <p className="text-xs text-brand-500">Extra {meal.sauce_label}</p>
                   )}
                 </li>
               );
@@ -471,6 +507,12 @@ export default function ConfirmationPage() {
             <span>{isAthlete ? `Repas personnalisés (${pack.plates} plats)` : `Formule (${pack.plates} plats)`}</span>
             <span>{formatPrice(mealsTotal)}</span>
           </div>
+          {!isAthlete && sauceTotal > 0 && (
+            <div className="flex items-center justify-between text-brand-700">
+              <span>Sauces supplémentaires</span>
+              <span>{formatPrice(sauceTotal)}</span>
+            </div>
+          )}
           {extrasTotal > 0 && (
             <div className="flex items-center justify-between text-brand-700">
               <span>Extras</span>
@@ -483,7 +525,11 @@ export default function ConfirmationPage() {
           </div>
           <div className="flex items-center justify-between pt-2 text-lg font-bold text-brand-800">
             <span>Total</span>
-            <span>{formatPrice(mealsTotal + extrasTotal + delivery.deliveryFee)}</span>
+            <span>
+              {formatPrice(
+                mealsTotal + (isAthlete ? 0 : sauceTotal) + extrasTotal + delivery.deliveryFee
+              )}
+            </span>
           </div>
         </div>
         <p className="text-sm text-brand-600">Paiement à la livraison uniquement.</p>
