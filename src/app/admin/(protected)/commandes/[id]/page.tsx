@@ -18,13 +18,19 @@ export default async function AdminOrderDetailPage({
 
   const { data: orderItems } = await supabase
     .from("order_items")
-    .select("meal_id, quantity")
+    .select(
+      "meal_id, quantity, protein_grams, starch_grams, veg_grams, extra_veg_grams, sauce, unit_price"
+    )
     .eq("order_id", order.id);
 
   const mealIds = (orderItems ?? []).map((i) => i.meal_id);
   const { data: meals } = mealIds.length
-    ? await supabase.from("meals").select("id, name").in("id", mealIds)
+    ? await supabase
+        .from("meals")
+        .select("id, name, protein_label, starch_label")
+        .in("id", mealIds)
     : { data: [] };
+  const mealById = new Map((meals ?? []).map((m) => [m.id, m]));
   const mealNameById = new Map((meals ?? []).map((m) => [m.id, m.name]));
 
   const { data: orderExtras } = await supabase
@@ -86,11 +92,35 @@ export default async function AdminOrderDetailPage({
           Repas ({order.pack_plates} plats)
         </h2>
         <ul className="mt-1 space-y-1">
-          {orderItems?.map((item) => (
-            <li key={item.meal_id} className="text-brand-800">
-              {item.quantity}× {mealNameById.get(item.meal_id) ?? "Repas supprimé"}
-            </li>
-          ))}
+          {orderItems?.map((item) => {
+            const meal = mealById.get(item.meal_id);
+            const isCustomized = item.veg_grams !== null;
+            const parts: string[] = [];
+            if (meal?.protein_label && item.protein_grams) {
+              parts.push(`${meal.protein_label} ${item.protein_grams}g`);
+            }
+            if (meal?.starch_label && item.starch_grams) {
+              parts.push(`${meal.starch_label} ${item.starch_grams}g`);
+            }
+            if (item.veg_grams) parts.push(`Légumes ${item.veg_grams}g`);
+            if (item.extra_veg_grams) parts.push(`+${item.extra_veg_grams}g légumes`);
+            if (item.sauce) parts.push("Sauce");
+            return (
+              <li key={item.meal_id} className="text-brand-800">
+                <div className="flex justify-between">
+                  <span>
+                    {item.quantity}× {mealNameById.get(item.meal_id) ?? "Repas supprimé"}
+                  </span>
+                  {isCustomized && item.unit_price !== null && (
+                    <span>{formatPrice(item.unit_price * item.quantity)}</span>
+                  )}
+                </div>
+                {isCustomized && parts.length > 0 && (
+                  <p className="text-xs text-brand-500">{parts.join(" · ")}</p>
+                )}
+              </li>
+            );
+          })}
         </ul>
 
         {(gifts.length > 0 || paidExtras.length > 0) && (
@@ -128,7 +158,7 @@ export default async function AdminOrderDetailPage({
 
         <div className="mt-6 space-y-1 border-t border-brand-200 pt-4">
           <div className="flex items-center justify-between text-brand-700">
-            <span>Formule</span>
+            <span>{order.program === "athlete" ? "Repas personnalisés" : "Formule"}</span>
             <span>{formatPrice(order.pack_price)}</span>
           </div>
           {extrasTotal > 0 && (

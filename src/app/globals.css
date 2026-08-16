@@ -22,6 +22,7 @@
   --color-objective-equilibre: #c88a3d;
   --color-objective-prise: #3a4a2e;
   --color-objective-transformation: #4a7a8c;
+  --color-objective-athlete: #a8442e;
 }
 
 @theme inline {
@@ -42,6 +43,7 @@
   --color-objective-equilibre: var(--color-objective-equilibre);
   --color-objective-prise: var(--color-objective-prise);
   --color-objective-transformation: var(--color-objective-transformation);
+  --color-objective-athlete: var(--color-objective-athlete);
   --font-sans: var(--font-lato);
   --font-display: var(--font-playfair);
 }

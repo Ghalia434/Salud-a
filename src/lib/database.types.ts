@@ -2,7 +2,8 @@ export type ProgramType =
   | "perte_de_poids"
   | "equilibre"
   | "prise_de_masse"
-  | "transformation_corporelle";
+  | "transformation_corporelle"
+  | "athlete";
 
 export type OrderStatus =
   | "en_attente"
@@ -47,6 +48,8 @@ export interface Database {
           program: ProgramType;
           active: boolean;
           available: boolean;
+          protein_label: string | null;
+          starch_label: string | null;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["meals"]["Row"]>;
@@ -107,6 +110,12 @@ export interface Database {
           order_id: string;
           meal_id: string;
           quantity: number;
+          protein_grams: number | null;
+          starch_grams: number | null;
+          veg_grams: number | null;
+          extra_veg_grams: number | null;
+          sauce: boolean;
+          unit_price: number | null;
         };
         Insert: Partial<Database["public"]["Tables"]["order_items"]["Row"]> & {
           order_id: string;
@@ -165,7 +174,16 @@ export interface Database {
           p_gift_detox: boolean;
           p_gift_gourmandise: boolean;
           p_free_delivery: boolean;
-          p_items: { meal_id: string; quantity: number }[];
+          p_items: {
+            meal_id: string;
+            quantity: number;
+            protein_grams?: number;
+            starch_grams?: number;
+            veg_grams?: number;
+            extra_veg_grams?: number;
+            sauce?: boolean;
+            unit_price?: number;
+          }[];
           p_extras: { extra_id: string; quantity: number; is_gift: boolean }[];
         };
         Returns: { order_id: string; order_number: string }[];

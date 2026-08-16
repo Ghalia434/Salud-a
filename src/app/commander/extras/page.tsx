@@ -180,10 +180,12 @@ export default function ExtrasPage() {
 
       <div className="sticky bottom-0 mt-10 flex items-center justify-between border-t border-brand-200 bg-brand-cream/95 py-4 backdrop-blur">
         <button
-          onClick={() => router.push("/commander/repas")}
+          onClick={() =>
+            router.push(program === "athlete" ? "/commander/portions" : "/commander/repas")
+          }
           className="rounded-full border border-brand-300 px-6 py-3 font-semibold text-brand-700"
         >
-          Retour aux repas
+          {program === "athlete" ? "Retour aux portions" : "Retour aux repas"}
         </button>
         <button
           onClick={() => router.push("/commander/panier")}

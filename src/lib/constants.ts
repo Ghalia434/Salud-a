@@ -8,6 +8,7 @@ export const PROGRAMS: Record<
     description: string;
     calories: number;
     protein: number;
+    features?: string[];
   }
 > = {
   perte_de_poids: {
@@ -38,6 +39,19 @@ export const PROGRAMS: Record<
     calories: 550,
     protein: 40,
   },
+  athlete: {
+    label: "Formule Athlète",
+    tagline: "Vos portions, sur-mesure, au gramme près.",
+    description:
+      "Composez chaque assiette en ajustant vous-même les portions de protéines, féculents et légumes.",
+    calories: 0,
+    protein: 0,
+    features: [
+      "Portions personnalisables au gramme",
+      "Ingrédients réels de chaque plat",
+      "Prix calculé en temps réel",
+    ],
+  },
 };
 
 export const PROGRAM_ORDER: ProgramType[] = [
@@ -45,6 +59,7 @@ export const PROGRAM_ORDER: ProgramType[] = [
   "equilibre",
   "prise_de_masse",
   "transformation_corporelle",
+  "athlete",
 ];
 
 // Literal Tailwind class names per program (Tailwind's scanner needs the
@@ -73,6 +88,11 @@ export const PROGRAM_STYLES: Record<
     badgeBg: "bg-objective-transformation/15",
     iconText: "text-objective-transformation",
     ring: "border-objective-transformation/30",
+  },
+  athlete: {
+    badgeBg: "bg-objective-athlete/15",
+    iconText: "text-objective-athlete",
+    ring: "border-objective-athlete/30",
   },
 };
 
@@ -131,3 +151,14 @@ export function deliveryFeeFor(city: string): number {
 }
 
 export const WHATSAPP_NUMBER = "+212693401564";
+
+// Formule Athlète — per-gram component pricing (DH/g), applied on top of a
+// 100g floor per component, in 10g increments.
+export const ATHLETE_PRICING = {
+  proteinRatePerGram: 0.22,
+  starchRatePerGram: 0.18,
+  vegRatePerGram: 0.06,
+  saucePrice: 8,
+  minGrams: 100,
+  gramStep: 10,
+} as const;

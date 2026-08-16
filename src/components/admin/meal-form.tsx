@@ -21,6 +21,8 @@ export function MealForm({ mealId }: { mealId?: string }) {
   const [calories, setCalories] = useState(0);
   const [proteinG, setProteinG] = useState(0);
   const [program, setProgram] = useState<ProgramType>(DEFAULT_PROGRAM);
+  const [proteinLabel, setProteinLabel] = useState("");
+  const [starchLabel, setStarchLabel] = useState("");
   const [active, setActive] = useState(true);
   const [available, setAvailable] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -41,6 +43,8 @@ export function MealForm({ mealId }: { mealId?: string }) {
           setCalories(data.calories);
           setProteinG(data.protein_g);
           setProgram(data.program);
+          setProteinLabel(data.protein_label ?? "");
+          setStarchLabel(data.starch_label ?? "");
           setActive(data.active);
           setAvailable(data.available);
           setPhotoUrl(data.photo_url);
@@ -82,6 +86,8 @@ export function MealForm({ mealId }: { mealId?: string }) {
       calories,
       protein_g: proteinG,
       program,
+      protein_label: proteinLabel || null,
+      starch_label: starchLabel || null,
       active,
       available,
       photo_url: photoUrl,
@@ -160,6 +166,37 @@ export function MealForm({ mealId }: { mealId?: string }) {
           className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
         />
       </label>
+
+      <div className="grid grid-cols-2 gap-4">
+        <label className="block">
+          <span className="text-sm font-semibold text-brand-700">
+            Ingrédient protéine (Formule Athlète)
+          </span>
+          <input
+            type="text"
+            value={proteinLabel}
+            onChange={(e) => setProteinLabel(e.target.value)}
+            placeholder="Ex : Poulet"
+            className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-semibold text-brand-700">
+            Ingrédient féculent (Formule Athlète)
+          </span>
+          <input
+            type="text"
+            value={starchLabel}
+            onChange={(e) => setStarchLabel(e.target.value)}
+            placeholder="Ex : Riz noir"
+            className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
+          />
+        </label>
+      </div>
+      <p className="-mt-3 text-xs text-brand-500">
+        Laisser vide si le plat n&apos;a pas de composant dédié (ex : une salade) — il
+        sera alors facturé comme un seul composant légumes dans la Formule Athlète.
+      </p>
 
       <label className="flex items-center gap-2 text-sm font-semibold text-brand-700">
         <input

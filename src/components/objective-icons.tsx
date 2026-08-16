@@ -85,6 +85,29 @@ function TransformationIcon(props: IconProps) {
   );
 }
 
+function AthleteIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 48 48" fill="none" {...props}>
+      <rect x="10" y="20" width="28" height="18" rx="3" fill="currentColor" fillOpacity="0.9" />
+      <rect x="20" y="10" width="8" height="12" rx="2" fill="currentColor" />
+      <circle cx="24" cy="29" r="6" fill={GOLD} />
+      <path
+        d="M24 25.5v3.5l2.4 2.4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6 20l4 4M42 20l-4 4"
+        stroke={GOLD}
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export const OBJECTIVE_ICONS: Record<
   ProgramType,
   (props: IconProps) => React.JSX.Element
@@ -93,4 +116,5 @@ export const OBJECTIVE_ICONS: Record<
   equilibre: EquilibreIcon,
   prise_de_masse: PriseDeMasseIcon,
   transformation_corporelle: TransformationIcon,
+  athlete: AthleteIcon,
 };

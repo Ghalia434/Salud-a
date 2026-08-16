@@ -4,13 +4,28 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { useCartStore, type CartDelivery } from "@/lib/cart-store";
+import { useCartStore, DEFAULT_ATHLETE_CUSTOMIZATION, type AthleteCustomization, type CartDelivery } from "@/lib/cart-store";
 import { PROGRAMS } from "@/lib/constants";
+import { computeAthleteMealUnitPrice } from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database, ProgramType } from "@/lib/database.types";
 
 type Meal = Database["public"]["Tables"]["meals"]["Row"];
 type Extra = Database["public"]["Tables"]["extras"]["Row"];
+
+function formatCustomizationLabel(meal: Meal, custom: AthleteCustomization): string {
+  const parts: string[] = [];
+  if (meal.protein_label && custom.proteinGrams) {
+    parts.push(`${meal.protein_label} ${custom.proteinGrams}g`);
+  }
+  if (meal.starch_label && custom.starchGrams) {
+    parts.push(`${meal.starch_label} ${custom.starchGrams}g`);
+  }
+  parts.push(`Légumes ${custom.vegGrams}g`);
+  if (custom.extraVegGrams > 0) parts.push(`+${custom.extraVegGrams}g légumes`);
+  if (custom.sauce) parts.push("Sauce");
+  return parts.join(" · ");
+}
 
 interface Receipt {
   orderNumber: string;
@@ -19,7 +34,7 @@ interface Receipt {
   packPlates: number;
   packPrice: number;
   deliveryFee: number;
-  items: { name: string; quantity: number }[];
+  items: { name: string; quantity: number; unitPrice?: number; customizationLabel?: string }[];
   paidExtras: { name: string; quantity: number; price: number }[];
   giftNames: string[];
   delivery: CartDelivery;
@@ -34,7 +49,9 @@ export default function ConfirmationPage() {
   const giftDetoxId = useCartStore((s) => s.giftDetoxId);
   const giftGourmandiseId = useCartStore((s) => s.giftGourmandiseId);
   const delivery = useCartStore((s) => s.delivery);
+  const athleteCustomization = useCartStore((s) => s.athleteCustomization);
   const reset = useCartStore((s) => s.reset);
+  const isAthlete = program === "athlete";
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [extras, setExtras] = useState<Extra[]>([]);
@@ -85,6 +102,14 @@ export default function ConfirmationPage() {
     return sum + (extra ? extra.price * qty : 0);
   }, 0);
 
+  const mealsTotal = isAthlete
+    ? meals.reduce((sum, meal) => {
+        const qty = items[meal.id] ?? 0;
+        const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+        return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
+      }, 0)
+    : pack?.price ?? 0;
+
   async function confirmOrder() {
     if (!program || !pack || !delivery) return;
     setSubmitting(true);
@@ -107,7 +132,7 @@ export default function ConfirmationPage() {
     const { data, error: rpcError } = await supabase.rpc("create_order", {
       p_program: program,
       p_pack_plates: pack.plates,
-      p_pack_price: pack.price,
+      p_pack_price: isAthlete ? Math.round(mealsTotal) : pack.price,
       p_delivery_fee: delivery.deliveryFee,
       p_full_name: delivery.fullName,
       p_phone: delivery.phone,
@@ -117,10 +142,21 @@ export default function ConfirmationPage() {
       p_gift_detox: pack.giftDetox,
       p_gift_gourmandise: pack.giftGourmandise,
       p_free_delivery: pack.freeDelivery,
-      p_items: Object.entries(items).map(([meal_id, quantity]) => ({
-        meal_id,
-        quantity,
-      })),
+      p_items: Object.entries(items).map(([meal_id, quantity]) => {
+        if (!isAthlete) return { meal_id, quantity };
+        const meal = meals.find((m) => m.id === meal_id);
+        const custom = athleteCustomization[meal_id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+        return {
+          meal_id,
+          quantity,
+          protein_grams: meal?.protein_label ? (custom.proteinGrams ?? undefined) : undefined,
+          starch_grams: meal?.starch_label ? (custom.starchGrams ?? undefined) : undefined,
+          veg_grams: custom.vegGrams,
+          extra_veg_grams: custom.extraVegGrams,
+          sauce: custom.sauce,
+          unit_price: meal ? computeAthleteMealUnitPrice(meal, custom) : undefined,
+        };
+      }),
       p_extras: extrasPayload,
     });
 
@@ -141,12 +177,21 @@ export default function ConfirmationPage() {
       createdAt: new Date(),
       program,
       packPlates: pack.plates,
-      packPrice: pack.price,
+      packPrice: isAthlete ? Math.round(mealsTotal) : pack.price,
       deliveryFee: delivery.deliveryFee,
-      items: Object.entries(items).map(([mealId, quantity]) => ({
-        name: meals.find((m) => m.id === mealId)?.name ?? "Repas",
-        quantity,
-      })),
+      items: Object.entries(items).map(([mealId, quantity]) => {
+        const meal = meals.find((m) => m.id === mealId);
+        if (!isAthlete || !meal) {
+          return { name: meal?.name ?? "Repas", quantity };
+        }
+        const custom = athleteCustomization[mealId] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+        return {
+          name: meal.name,
+          quantity,
+          unitPrice: computeAthleteMealUnitPrice(meal, custom),
+          customizationLabel: formatCustomizationLabel(meal, custom),
+        };
+      }),
       paidExtras: Object.entries(extrasQty).map(([extraId, quantity]) => {
         const extra = extras.find((e) => e.id === extraId);
         return {
@@ -217,7 +262,17 @@ export default function ConfirmationPage() {
             <ul className="mt-1 space-y-1">
               {receipt.items.map((item, i) => (
                 <li key={i} className="text-brand-800">
-                  {item.quantity}× {item.name}
+                  <div className="flex justify-between">
+                    <span>
+                      {item.quantity}× {item.name}
+                    </span>
+                    {item.unitPrice !== undefined && (
+                      <span>{formatPrice(item.unitPrice * item.quantity)}</span>
+                    )}
+                  </div>
+                  {item.customizationLabel && (
+                    <p className="text-xs text-brand-500">{item.customizationLabel}</p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -264,7 +319,7 @@ export default function ConfirmationPage() {
 
           <div className="mt-4 space-y-1 border-t border-dashed border-brand-200 pt-4">
             <div className="flex items-center justify-between text-brand-700">
-              <span>Formule</span>
+              <span>{receipt.program === "athlete" ? "Repas personnalisés" : "Formule"}</span>
               <span>{formatPrice(receipt.packPrice)}</span>
             </div>
             {receipt.paidExtras.length > 0 && (
@@ -340,11 +395,30 @@ export default function ConfirmationPage() {
             Repas ({pack.plates} plats)
           </h2>
           <ul className="mt-1 space-y-1">
-            {meals.map((meal) => (
-              <li key={meal.id} className="text-brand-800">
-                {items[meal.id]}× {meal.name}
-              </li>
-            ))}
+            {meals.map((meal) => {
+              const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+              return (
+                <li key={meal.id} className="text-brand-800">
+                  <div className="flex justify-between">
+                    <span>
+                      {items[meal.id]}× {meal.name}
+                    </span>
+                    {isAthlete && (
+                      <span>
+                        {formatPrice(
+                          computeAthleteMealUnitPrice(meal, custom) * (items[meal.id] ?? 0)
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {isAthlete && (
+                    <p className="text-xs text-brand-500">
+                      {formatCustomizationLabel(meal, custom)}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
 
@@ -394,8 +468,8 @@ export default function ConfirmationPage() {
 
         <div className="space-y-1 border-t border-brand-200 pt-4">
           <div className="flex items-center justify-between text-brand-700">
-            <span>Formule ({pack.plates} plats)</span>
-            <span>{formatPrice(pack.price)}</span>
+            <span>{isAthlete ? `Repas personnalisés (${pack.plates} plats)` : `Formule (${pack.plates} plats)`}</span>
+            <span>{formatPrice(mealsTotal)}</span>
           </div>
           {extrasTotal > 0 && (
             <div className="flex items-center justify-between text-brand-700">
@@ -409,7 +483,7 @@ export default function ConfirmationPage() {
           </div>
           <div className="flex items-center justify-between pt-2 text-lg font-bold text-brand-800">
             <span>Total</span>
-            <span>{formatPrice(pack.price + extrasTotal + delivery.deliveryFee)}</span>
+            <span>{formatPrice(mealsTotal + extrasTotal + delivery.deliveryFee)}</span>
           </div>
         </div>
         <p className="text-sm text-brand-600">Paiement à la livraison uniquement.</p>

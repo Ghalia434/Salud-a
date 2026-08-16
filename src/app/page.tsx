@@ -96,10 +96,21 @@ export default function Home() {
                     {program.label}
                   </h3>
                   <p className="mt-2 text-sm text-brand-600">{program.description}</p>
-                  <div className="mt-auto flex gap-4 pt-6 text-xs font-semibold text-brand-700">
-                    <span>{program.calories} kcal</span>
-                    <span>{program.protein} g protéines</span>
-                  </div>
+                  {program.features ? (
+                    <ul className="mt-auto flex flex-col gap-1 pt-6 text-xs font-semibold text-brand-700">
+                      {program.features.map((feature) => (
+                        <li key={feature} className="flex items-center gap-2">
+                          <span className={`h-1.5 w-1.5 rounded-full ${style.iconText} bg-current`} />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="mt-auto flex gap-4 pt-6 text-xs font-semibold text-brand-700">
+                      <span>{program.calories} kcal</span>
+                      <span>{program.protein} g protéines</span>
+                    </div>
+                  )}
                   <span
                     className={`mt-6 text-sm font-semibold ${style.iconText} opacity-80 group-hover:opacity-100`}
                   >
