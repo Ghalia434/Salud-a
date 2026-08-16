@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useCartStore, DEFAULT_ATHLETE_CUSTOMIZATION } from "@/lib/cart-store";
+import { useCartStore } from "@/lib/cart-store";
 import { PROGRAMS, EXTRA_SAUCE_PRICE } from "@/lib/constants";
-import { computeAthleteMealUnitPrice, mealSauceTotal } from "@/lib/athlete-pricing";
+import {
+  computeAthleteMealUnitPrice,
+  getDefaultAthleteCustomization,
+  mealSauceTotal,
+} from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 
@@ -79,7 +83,7 @@ export default function PanierPage() {
   const mealsTotal = isAthlete
     ? meals.reduce((sum, meal) => {
         const qty = items[meal.id] ?? 0;
-        const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+        const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
         return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
       }, 0) + sauceTotal
     : pack.price;
@@ -121,7 +125,7 @@ export default function PanierPage() {
         {meals.map((meal) => {
           const qty = items[meal.id] ?? 0;
           if (qty === 0) return null;
-          const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+          const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
           const hasSauce = mealSauces[meal.id] ?? false;
           const unitPrice = isAthlete
             ? computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0)

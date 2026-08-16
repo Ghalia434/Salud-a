@@ -7,6 +7,32 @@ type MealLabels = Pick<
   "protein_label" | "starch_label" | "veg_label"
 >;
 
+type MealDefaultGrams = Pick<
+  Database["public"]["Tables"]["meals"]["Row"],
+  | "protein_label"
+  | "starch_label"
+  | "veg_label"
+  | "protein_default_grams"
+  | "starch_default_grams"
+  | "veg_default_grams"
+>;
+
+// The starting portion a client sees for a given meal — the admin-set
+// default gram amount per component if configured, otherwise the 100g
+// floor. A component is only included when the meal actually has it
+// (e.g. no proteinGrams for a meal with no protein_label).
+export function getDefaultAthleteCustomization(meal: MealDefaultGrams): AthleteCustomization {
+  return {
+    proteinGrams: meal.protein_label
+      ? Math.max(ATHLETE_PRICING.minGrams, meal.protein_default_grams ?? ATHLETE_PRICING.minGrams)
+      : null,
+    starchGrams: meal.starch_label
+      ? Math.max(ATHLETE_PRICING.minGrams, meal.starch_default_grams ?? ATHLETE_PRICING.minGrams)
+      : null,
+    vegGrams: Math.max(ATHLETE_PRICING.minGrams, meal.veg_default_grams ?? ATHLETE_PRICING.minGrams),
+  };
+}
+
 // Each component (protein/starch/veg) only counts toward the price — and
 // only appears in the portions UI — when the meal actually has that real
 // ingredient (e.g. Salade exotique has veg_label but no protein_label).

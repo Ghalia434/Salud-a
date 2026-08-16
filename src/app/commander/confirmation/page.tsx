@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { useCartStore, DEFAULT_ATHLETE_CUSTOMIZATION, type AthleteCustomization, type CartDelivery } from "@/lib/cart-store";
+import { useCartStore, type AthleteCustomization, type CartDelivery } from "@/lib/cart-store";
 import { PROGRAMS, EXTRA_SAUCE_PRICE } from "@/lib/constants";
-import { computeAthleteMealUnitPrice, mealSauceTotal } from "@/lib/athlete-pricing";
+import {
+  computeAthleteMealUnitPrice,
+  getDefaultAthleteCustomization,
+  mealSauceTotal,
+} from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database, ProgramType } from "@/lib/database.types";
 
@@ -111,7 +115,7 @@ export default function ConfirmationPage() {
   const mealsTotal = isAthlete
     ? meals.reduce((sum, meal) => {
         const qty = items[meal.id] ?? 0;
-        const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+        const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
         return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
       }, 0) + sauceTotal
     : pack?.price ?? 0;
@@ -159,17 +163,18 @@ export default function ConfirmationPage() {
           };
         }
         const meal = meals.find((m) => m.id === meal_id);
-        const custom = athleteCustomization[meal_id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+        if (!meal) {
+          return { meal_id, quantity, sauce: hasSauce, unit_price: undefined };
+        }
+        const custom = athleteCustomization[meal_id] ?? getDefaultAthleteCustomization(meal);
         return {
           meal_id,
           quantity,
-          protein_grams: meal?.protein_label ? (custom.proteinGrams ?? undefined) : undefined,
-          starch_grams: meal?.starch_label ? (custom.starchGrams ?? undefined) : undefined,
+          protein_grams: meal.protein_label ? (custom.proteinGrams ?? undefined) : undefined,
+          starch_grams: meal.starch_label ? (custom.starchGrams ?? undefined) : undefined,
           veg_grams: custom.vegGrams,
           sauce: hasSauce,
-          unit_price: meal
-            ? computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0)
-            : undefined,
+          unit_price: computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0),
         };
       }),
       p_extras: extrasPayload,
@@ -206,7 +211,7 @@ export default function ConfirmationPage() {
               hasSauce && meal?.sauce_label ? `Extra ${meal.sauce_label}` : undefined,
           };
         }
-        const custom = athleteCustomization[mealId] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+        const custom = athleteCustomization[mealId] ?? getDefaultAthleteCustomization(meal);
         return {
           name: meal.name,
           quantity,
@@ -425,7 +430,7 @@ export default function ConfirmationPage() {
           </h2>
           <ul className="mt-1 space-y-1">
             {meals.map((meal) => {
-              const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+              const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
               const hasSauce = mealSauces[meal.id] ?? false;
               const qty = items[meal.id] ?? 0;
               return (

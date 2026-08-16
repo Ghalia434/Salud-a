@@ -25,6 +25,9 @@ export function MealForm({ mealId }: { mealId?: string }) {
   const [starchLabel, setStarchLabel] = useState("");
   const [vegLabel, setVegLabel] = useState("");
   const [sauceLabel, setSauceLabel] = useState("");
+  const [proteinDefaultGrams, setProteinDefaultGrams] = useState("");
+  const [starchDefaultGrams, setStarchDefaultGrams] = useState("");
+  const [vegDefaultGrams, setVegDefaultGrams] = useState("");
   const [active, setActive] = useState(true);
   const [available, setAvailable] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -49,6 +52,9 @@ export function MealForm({ mealId }: { mealId?: string }) {
           setStarchLabel(data.starch_label ?? "");
           setVegLabel(data.veg_label ?? "");
           setSauceLabel(data.sauce_label ?? "");
+          setProteinDefaultGrams(data.protein_default_grams?.toString() ?? "");
+          setStarchDefaultGrams(data.starch_default_grams?.toString() ?? "");
+          setVegDefaultGrams(data.veg_default_grams?.toString() ?? "");
           setActive(data.active);
           setAvailable(data.available);
           setPhotoUrl(data.photo_url);
@@ -94,6 +100,9 @@ export function MealForm({ mealId }: { mealId?: string }) {
       starch_label: starchLabel || null,
       veg_label: vegLabel || null,
       sauce_label: sauceLabel || null,
+      protein_default_grams: proteinDefaultGrams ? Number(proteinDefaultGrams) : null,
+      starch_default_grams: starchDefaultGrams ? Number(starchDefaultGrams) : null,
+      veg_default_grams: vegDefaultGrams ? Number(vegDefaultGrams) : null,
       active,
       available,
       photo_url: photoUrl,
@@ -174,49 +183,92 @@ export function MealForm({ mealId }: { mealId?: string }) {
       </label>
 
       <div className="grid grid-cols-2 gap-4">
-        <label className="block">
-          <span className="text-sm font-semibold text-brand-700">
-            Ingrédient protéine (Formule Athlète)
-          </span>
-          <input
-            type="text"
-            value={proteinLabel}
-            onChange={(e) => setProteinLabel(e.target.value)}
-            placeholder="Ex : Poulet"
-            className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-semibold text-brand-700">
-            Ingrédient féculent (Formule Athlète)
-          </span>
-          <input
-            type="text"
-            value={starchLabel}
-            onChange={(e) => setStarchLabel(e.target.value)}
-            placeholder="Ex : Riz noir"
-            className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
-          />
-        </label>
+        <div className="flex gap-2">
+          <label className="block flex-1">
+            <span className="text-sm font-semibold text-brand-700">
+              Ingrédient protéine (Formule Athlète)
+            </span>
+            <input
+              type="text"
+              value={proteinLabel}
+              onChange={(e) => setProteinLabel(e.target.value)}
+              placeholder="Ex : Poulet"
+              className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
+            />
+          </label>
+          <label className="block w-24">
+            <span className="text-sm font-semibold text-brand-700">Défaut (g)</span>
+            <input
+              type="number"
+              min={0}
+              step={10}
+              value={proteinDefaultGrams}
+              onChange={(e) => setProteinDefaultGrams(e.target.value)}
+              placeholder="100"
+              className="mt-1 w-full rounded-lg border border-brand-300 px-2 py-2"
+            />
+          </label>
+        </div>
+        <div className="flex gap-2">
+          <label className="block flex-1">
+            <span className="text-sm font-semibold text-brand-700">
+              Ingrédient féculent (Formule Athlète)
+            </span>
+            <input
+              type="text"
+              value={starchLabel}
+              onChange={(e) => setStarchLabel(e.target.value)}
+              placeholder="Ex : Riz noir"
+              className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
+            />
+          </label>
+          <label className="block w-24">
+            <span className="text-sm font-semibold text-brand-700">Défaut (g)</span>
+            <input
+              type="number"
+              min={0}
+              step={10}
+              value={starchDefaultGrams}
+              onChange={(e) => setStarchDefaultGrams(e.target.value)}
+              placeholder="100"
+              className="mt-1 w-full rounded-lg border border-brand-300 px-2 py-2"
+            />
+          </label>
+        </div>
       </div>
       <p className="-mt-3 text-xs text-brand-500">
-        Laisser vide si le plat n&apos;a pas de composant dédié — il ne sera pas
-        proposé dans la personnalisation de la Formule Athlète.
+        Laisser le nom vide si le plat n&apos;a pas de composant dédié — il ne sera
+        pas proposé dans la personnalisation de la Formule Athlète. Le grammage par
+        défaut est la portion de départ proposée au client (100g si laissé vide).
       </p>
 
       <div className="grid grid-cols-2 gap-4">
-        <label className="block">
-          <span className="text-sm font-semibold text-brand-700">
-            Légume du plat (Formule Athlète)
-          </span>
-          <input
-            type="text"
-            value={vegLabel}
-            onChange={(e) => setVegLabel(e.target.value)}
-            placeholder="Ex : Légumes frais"
-            className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
-          />
-        </label>
+        <div className="flex gap-2">
+          <label className="block flex-1">
+            <span className="text-sm font-semibold text-brand-700">
+              Légume du plat (Formule Athlète)
+            </span>
+            <input
+              type="text"
+              value={vegLabel}
+              onChange={(e) => setVegLabel(e.target.value)}
+              placeholder="Ex : Légumes frais"
+              className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
+            />
+          </label>
+          <label className="block w-24">
+            <span className="text-sm font-semibold text-brand-700">Défaut (g)</span>
+            <input
+              type="number"
+              min={0}
+              step={10}
+              value={vegDefaultGrams}
+              onChange={(e) => setVegDefaultGrams(e.target.value)}
+              placeholder="100"
+              className="mt-1 w-full rounded-lg border border-brand-300 px-2 py-2"
+            />
+          </label>
+        </div>
         <label className="block">
           <span className="text-sm font-semibold text-brand-700">Nom de la sauce</span>
           <input

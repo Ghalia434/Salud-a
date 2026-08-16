@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { useCartStore, DEFAULT_ATHLETE_CUSTOMIZATION } from "@/lib/cart-store";
+import { useCartStore } from "@/lib/cart-store";
 import { ATHLETE_PRICING, EXTRA_SAUCE_PRICE } from "@/lib/constants";
-import { computeAthleteMealUnitPrice, mealSauceTotal } from "@/lib/athlete-pricing";
+import {
+  computeAthleteMealUnitPrice,
+  getDefaultAthleteCustomization,
+  mealSauceTotal,
+} from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 
@@ -60,7 +64,7 @@ export default function PortionsPage() {
 
   const grandTotal =
     meals.reduce((sum, meal) => {
-      const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+      const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
       const qty = items[meal.id] ?? 0;
       return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
     }, 0) + mealSauceTotal(items, mealSauces);
@@ -79,7 +83,7 @@ export default function PortionsPage() {
 
       <div className="mt-8 space-y-6">
         {meals.map((meal) => {
-          const custom = athleteCustomization[meal.id] ?? DEFAULT_ATHLETE_CUSTOMIZATION;
+          const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
           const qty = items[meal.id] ?? 0;
           const hasSauce = mealSauces[meal.id] ?? false;
           const unitPrice =
@@ -120,7 +124,7 @@ export default function PortionsPage() {
                     step={ATHLETE_PRICING.gramStep}
                     ratePerGram={ATHLETE_PRICING.proteinRatePerGram}
                     onChange={(proteinGrams) =>
-                      setAthleteCustomization(meal.id, { proteinGrams })
+                      setAthleteCustomization(meal.id, { ...custom, proteinGrams })
                     }
                   />
                 )}
@@ -132,7 +136,7 @@ export default function PortionsPage() {
                     step={ATHLETE_PRICING.gramStep}
                     ratePerGram={ATHLETE_PRICING.starchRatePerGram}
                     onChange={(starchGrams) =>
-                      setAthleteCustomization(meal.id, { starchGrams })
+                      setAthleteCustomization(meal.id, { ...custom, starchGrams })
                     }
                   />
                 )}
@@ -143,7 +147,9 @@ export default function PortionsPage() {
                     min={ATHLETE_PRICING.minGrams}
                     step={ATHLETE_PRICING.gramStep}
                     ratePerGram={ATHLETE_PRICING.vegRatePerGram}
-                    onChange={(vegGrams) => setAthleteCustomization(meal.id, { vegGrams })}
+                    onChange={(vegGrams) =>
+                      setAthleteCustomization(meal.id, { ...custom, vegGrams })
+                    }
                   />
                 )}
               </div>

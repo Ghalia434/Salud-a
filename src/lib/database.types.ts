@@ -52,6 +52,9 @@ export interface Database {
           starch_label: string | null;
           veg_label: string | null;
           sauce_label: string | null;
+          protein_default_grams: number | null;
+          starch_default_grams: number | null;
+          veg_default_grams: number | null;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["meals"]["Row"]>;
