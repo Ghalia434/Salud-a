@@ -59,7 +59,9 @@ export default function PackPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold text-brand-800">
-        Formule {PROGRAMS[program].label}
+        {PROGRAMS[program].label.startsWith("Formule")
+          ? PROGRAMS[program].label
+          : `Formule ${PROGRAMS[program].label}`}
       </h1>
       <p className="mt-2 text-brand-600">
         Choisissez le nombre de plats pour votre semaine.

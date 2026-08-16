@@ -95,7 +95,10 @@ export default function PanierPage() {
     <div>
       <h1 className="font-display text-3xl font-bold text-brand-800">Votre panier</h1>
       <p className="mt-2 text-brand-600">
-        Formule {PROGRAMS[program].label} — {pack.plates} plats
+        {PROGRAMS[program].label.startsWith("Formule")
+          ? PROGRAMS[program].label
+          : `Formule ${PROGRAMS[program].label}`}{" "}
+        — {pack.plates} plats
       </p>
 
       {!complete && (
