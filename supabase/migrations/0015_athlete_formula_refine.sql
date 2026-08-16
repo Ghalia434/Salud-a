@@ -7,8 +7,7 @@ alter table meals add column if not exists veg_label text;
 alter table meals add column if not exists sauce_label text;
 
 -- Derived from each dish's existing description (already stored in meals).
--- Salade exotique keeps its vegetables but has no extra-sauce add-on.
-update meals set veg_label = 'Légumes frais'
+update meals set veg_label = 'Légumes frais', sauce_label = 'Sauce ananas'
   where name = 'Salade exotique';
 update meals set veg_label = 'Épinards', sauce_label = 'Sauce fromage frais'
   where name = 'Pâtes au saumon';
