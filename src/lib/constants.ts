@@ -36,7 +36,7 @@ export const PROGRAMS: Record<
     label: "Transformation corporelle",
     tagline: "Transformez votre corps durablement.",
     description: "Des repas complets pensés pour accompagner une transformation en profondeur.",
-    calories: 550,
+    calories: 650,
     protein: 40,
   },
   athlete: {

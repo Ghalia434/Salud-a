@@ -18,14 +18,16 @@ export default async function AdminOrderDetailPage({
 
   const { data: orderItems } = await supabase
     .from("order_items")
-    .select("meal_id, quantity, protein_grams, starch_grams, veg_grams, sauce, unit_price")
+    .select(
+      "meal_id, quantity, protein_grams, starch_grams, veg_grams, extra_grams, sauce, unit_price"
+    )
     .eq("order_id", order.id);
 
   const mealIds = (orderItems ?? []).map((i) => i.meal_id);
   const { data: meals } = mealIds.length
     ? await supabase
         .from("meals")
-        .select("id, name, protein_label, starch_label, veg_label, sauce_label")
+        .select("id, name, protein_label, starch_label, veg_label, extra_label, sauce_label")
         .in("id", mealIds)
     : { data: [] };
   const mealById = new Map((meals ?? []).map((m) => [m.id, m]));
@@ -114,6 +116,9 @@ export default async function AdminOrderDetailPage({
             }
             if (meal?.veg_label && item.veg_grams) {
               parts.push(`${meal.veg_label} ${item.veg_grams}g`);
+            }
+            if (meal?.extra_label && item.extra_grams) {
+              parts.push(`${meal.extra_label} ${item.extra_grams}g`);
             }
             if (item.sauce && meal?.sauce_label) parts.push(`Extra ${meal.sauce_label}`);
             return (

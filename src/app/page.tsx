@@ -45,17 +45,16 @@ export default function Home() {
                 </Link>
               ) : (
                 <div className="rounded-full bg-brand-800 px-8 py-3 text-base font-semibold text-brand-300">
-                  Commandes fermées — réouverture lundi
+                  Commandes fermées — réouverture demain
                 </div>
               )}
               <span className="text-sm text-brand-300">
                 Paiement à la livraison uniquement
               </span>
             </div>
-            <dl className="mt-14 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
+            <dl className="mt-14 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-3">
               {[
                 ["Casa & Bouskoura", "Zones de livraison"],
-                ["Lun–Ven", "Commandes ouvertes"],
                 ["Lun & Jeu", "Livraison"],
                 ["Min. 3", "Plats par commande"],
               ].map(([value, label]) => (
@@ -145,7 +144,7 @@ export default function Home() {
               alt="Saludèa"
               width={200}
               height={200}
-              className="mx-auto h-32 w-32 rounded-md sm:h-40 sm:w-40"
+              className="mx-auto h-32 w-32 rounded-full object-cover sm:h-40 sm:w-40"
             />
             <div>
               <p className="text-sm font-semibold uppercase tracking-widest text-brand-300">

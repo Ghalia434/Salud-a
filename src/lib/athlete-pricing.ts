@@ -4,7 +4,7 @@ import type { Database } from "@/lib/database.types";
 
 type MealLabels = Pick<
   Database["public"]["Tables"]["meals"]["Row"],
-  "protein_label" | "starch_label" | "veg_label"
+  "protein_label" | "starch_label" | "veg_label" | "extra_label" | "extra_price_per_100g"
 >;
 
 type MealDefaultGrams = Pick<
@@ -12,9 +12,11 @@ type MealDefaultGrams = Pick<
   | "protein_label"
   | "starch_label"
   | "veg_label"
+  | "extra_label"
   | "protein_default_grams"
   | "starch_default_grams"
   | "veg_default_grams"
+  | "extra_default_grams"
 >;
 
 // The starting portion a client sees for a given meal — the admin-set
@@ -30,12 +32,19 @@ export function getDefaultAthleteCustomization(meal: MealDefaultGrams): AthleteC
       ? Math.max(ATHLETE_PRICING.minGrams, meal.starch_default_grams ?? ATHLETE_PRICING.minGrams)
       : null,
     vegGrams: Math.max(ATHLETE_PRICING.minGrams, meal.veg_default_grams ?? ATHLETE_PRICING.minGrams),
+    extraGrams: Math.max(
+      ATHLETE_PRICING.minGrams,
+      meal.extra_default_grams ?? ATHLETE_PRICING.minGrams
+    ),
   };
 }
 
 // Each component (protein/starch/veg) only counts toward the price — and
 // only appears in the portions UI — when the meal actually has that real
 // ingredient (e.g. Salade exotique has veg_label but no protein_label).
+// "extra" is a 4th, meal-specific component priced at its own rate
+// (meals.extra_price_per_100g), for ingredients that don't fit the fixed
+// global protein/starch/veg rates (e.g. Mozzarella at 20 DH/100g).
 // Extra sauce is priced separately (see mealSauceTotal) since it's offered
 // across every objective, not just Formule Athlète.
 export function computeAthleteMealUnitPrice(
@@ -51,6 +60,9 @@ export function computeAthleteMealUnitPrice(
   }
   if (meal.veg_label) {
     total += c.vegGrams * ATHLETE_PRICING.vegRatePerGram;
+  }
+  if (meal.extra_label && meal.extra_price_per_100g) {
+    total += c.extraGrams * (meal.extra_price_per_100g / 100);
   }
   return Math.round(total * 100) / 100;
 }

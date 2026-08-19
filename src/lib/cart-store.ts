@@ -28,12 +28,14 @@ export interface AthleteCustomization {
   proteinGrams: number | null;
   starchGrams: number | null;
   vegGrams: number;
+  extraGrams: number;
 }
 
 export const DEFAULT_ATHLETE_CUSTOMIZATION: AthleteCustomization = {
   proteinGrams: 100,
   starchGrams: 100,
   vegGrams: 100,
+  extraGrams: 100,
 };
 
 interface CartState {

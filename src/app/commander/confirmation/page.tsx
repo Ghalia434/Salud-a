@@ -30,6 +30,7 @@ function formatCustomizationLabel(
     parts.push(`${meal.starch_label} ${custom.starchGrams}g`);
   }
   if (meal.veg_label) parts.push(`${meal.veg_label} ${custom.vegGrams}g`);
+  if (meal.extra_label) parts.push(`${meal.extra_label} ${custom.extraGrams}g`);
   if (hasSauce && meal.sauce_label) parts.push(`Extra ${meal.sauce_label}`);
   return parts.join(" · ");
 }
@@ -173,6 +174,7 @@ export default function ConfirmationPage() {
           protein_grams: meal.protein_label ? (custom.proteinGrams ?? undefined) : undefined,
           starch_grams: meal.starch_label ? (custom.starchGrams ?? undefined) : undefined,
           veg_grams: custom.vegGrams,
+          extra_grams: meal.extra_label ? custom.extraGrams : undefined,
           sauce: hasSauce,
           unit_price: computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0),
         };

@@ -152,6 +152,18 @@ export default function PortionsPage() {
                     }
                   />
                 )}
+                {meal.extra_label && meal.extra_price_per_100g && (
+                  <GramStepper
+                    label={meal.extra_label}
+                    grams={custom.extraGrams}
+                    min={ATHLETE_PRICING.minGrams}
+                    step={ATHLETE_PRICING.gramStep}
+                    ratePerGram={meal.extra_price_per_100g / 100}
+                    onChange={(extraGrams) =>
+                      setAthleteCustomization(meal.id, { ...custom, extraGrams })
+                    }
+                  />
+                )}
               </div>
 
               {meal.sauce_label && (

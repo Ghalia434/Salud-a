@@ -28,6 +28,9 @@ export function MealForm({ mealId }: { mealId?: string }) {
   const [proteinDefaultGrams, setProteinDefaultGrams] = useState("");
   const [starchDefaultGrams, setStarchDefaultGrams] = useState("");
   const [vegDefaultGrams, setVegDefaultGrams] = useState("");
+  const [extraLabel, setExtraLabel] = useState("");
+  const [extraPricePer100g, setExtraPricePer100g] = useState("");
+  const [extraDefaultGrams, setExtraDefaultGrams] = useState("");
   const [active, setActive] = useState(true);
   const [available, setAvailable] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -55,6 +58,9 @@ export function MealForm({ mealId }: { mealId?: string }) {
           setProteinDefaultGrams(data.protein_default_grams?.toString() ?? "");
           setStarchDefaultGrams(data.starch_default_grams?.toString() ?? "");
           setVegDefaultGrams(data.veg_default_grams?.toString() ?? "");
+          setExtraLabel(data.extra_label ?? "");
+          setExtraPricePer100g(data.extra_price_per_100g?.toString() ?? "");
+          setExtraDefaultGrams(data.extra_default_grams?.toString() ?? "");
           setActive(data.active);
           setAvailable(data.available);
           setPhotoUrl(data.photo_url);
@@ -103,6 +109,9 @@ export function MealForm({ mealId }: { mealId?: string }) {
       protein_default_grams: proteinDefaultGrams ? Number(proteinDefaultGrams) : null,
       starch_default_grams: starchDefaultGrams ? Number(starchDefaultGrams) : null,
       veg_default_grams: vegDefaultGrams ? Number(vegDefaultGrams) : null,
+      extra_label: extraLabel || null,
+      extra_price_per_100g: extraPricePer100g ? Number(extraPricePer100g) : null,
+      extra_default_grams: extraDefaultGrams ? Number(extraDefaultGrams) : null,
       active,
       available,
       photo_url: photoUrl,
@@ -284,6 +293,51 @@ export function MealForm({ mealId }: { mealId?: string }) {
         Le légume n&apos;apparaît que si ce plat en contient un vraiment. La sauce,
         elle, est proposée en option payante (Extra sauce) sur toutes les formules —
         laisser vide si ce plat n&apos;a pas de sauce.
+      </p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex gap-2">
+          <label className="block flex-1">
+            <span className="text-sm font-semibold text-brand-700">
+              Ingrédient supplémentaire (Formule Athlète)
+            </span>
+            <input
+              type="text"
+              value={extraLabel}
+              onChange={(e) => setExtraLabel(e.target.value)}
+              placeholder="Ex : Mozzarella"
+              className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
+            />
+          </label>
+          <label className="block w-24">
+            <span className="text-sm font-semibold text-brand-700">Défaut (g)</span>
+            <input
+              type="number"
+              min={0}
+              step={10}
+              value={extraDefaultGrams}
+              onChange={(e) => setExtraDefaultGrams(e.target.value)}
+              placeholder="100"
+              className="mt-1 w-full rounded-lg border border-brand-300 px-2 py-2"
+            />
+          </label>
+        </div>
+        <label className="block">
+          <span className="text-sm font-semibold text-brand-700">Prix pour 100g (DH)</span>
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            value={extraPricePer100g}
+            onChange={(e) => setExtraPricePer100g(e.target.value)}
+            placeholder="Ex : 20"
+            className="mt-1 w-full rounded-lg border border-brand-300 px-4 py-2"
+          />
+        </label>
+      </div>
+      <p className="-mt-3 text-xs text-brand-500">
+        Pour un ingrédient dont le tarif ne correspond ni à la protéine, ni au
+        féculent, ni aux légumes (ex : fromage). Laisser vide si non applicable.
       </p>
 
       <label className="flex items-center gap-2 text-sm font-semibold text-brand-700">
