@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore, type AthleteCustomization, type CartDelivery } from "@/lib/cart-store";
+import { isOrderingOpen } from "@/lib/business-hours";
 import { PROGRAMS, EXTRA_SAUCE_PRICE } from "@/lib/constants";
 import {
   computeAthleteMealUnitPrice,
@@ -121,8 +122,10 @@ export default function ConfirmationPage() {
       }, 0) + sauceTotal
     : pack?.price ?? 0;
 
+  const orderingOpen = isOrderingOpen();
+
   async function confirmOrder() {
-    if (!program || !pack || !delivery) return;
+    if (!program || !pack || !delivery || !orderingOpen) return;
     setSubmitting(true);
     setError(null);
 
@@ -542,10 +545,15 @@ export default function ConfirmationPage() {
         <p className="text-sm text-brand-600">Paiement à la livraison uniquement.</p>
       </div>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex flex-col items-end gap-3">
+        {!orderingOpen && (
+          <p className="rounded-lg bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-800">
+            Nous sommes fermés aujourd&apos;hui, veuillez revenir demain.
+          </p>
+        )}
         <button
           onClick={confirmOrder}
-          disabled={submitting}
+          disabled={submitting || !orderingOpen}
           className="rounded-full bg-brand-700 px-8 py-3 font-semibold text-white shadow disabled:opacity-40"
         >
           {submitting ? "Confirmation…" : "Confirmer la commande"}
