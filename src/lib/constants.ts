@@ -151,6 +151,7 @@ export function deliveryFeeFor(city: string): number {
 }
 
 export const WHATSAPP_NUMBER = "+212693401564";
+export const INSTAGRAM_URL = "https://www.instagram.com/saludea_meal_prep?igsi=MWFtemhjNXRkbDRz";
 
 // Formule Athlète — per-gram component pricing (DH/g), applied on top of a
 // 100g floor per component, in 10g increments.
