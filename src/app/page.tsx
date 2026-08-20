@@ -56,10 +56,11 @@ export default function Home() {
                 Paiement à la livraison uniquement
               </span>
             </div>
-            <dl className="mt-14 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-3">
+            <dl className="mt-14 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
               {[
                 ["Casa & Bouskoura", "Zones de livraison"],
                 ["Lun & Jeu", "Livraison"],
+                ["Dim & Mer", "Commandes fermées"],
                 ["Min. 3", "Plats par commande"],
               ].map(([value, label]) => (
                 <div key={label}>
