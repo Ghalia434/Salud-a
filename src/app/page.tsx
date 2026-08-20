@@ -7,6 +7,10 @@ import { OBJECTIVE_ICONS } from "@/components/objective-icons";
 import { isOrderingOpen } from "@/lib/business-hours";
 import { PROGRAMS, PROGRAM_ORDER, PROGRAM_STYLES } from "@/lib/constants";
 
+// isOrderingOpen() depends on today's date — this page must be re-evaluated
+// on every request, not statically frozen at build/deploy time.
+export const dynamic = "force-dynamic";
+
 const AUDIENCE = [
   { title: "Employés", text: "Des repas équilibrés même au bureau" },
   { title: "Sportifs", text: "Atteignez vos objectifs avec une nutrition adaptée" },
