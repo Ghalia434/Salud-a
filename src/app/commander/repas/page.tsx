@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/lib/cart-store";
-import { EXTRA_SAUCE_PRICE } from "@/lib/constants";
+import { DEFAULT_ATHLETE_PRICING_RATES, fetchAthletePricingRates } from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 
@@ -24,6 +24,7 @@ export default function RepasPage() {
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saucePrice, setSaucePrice] = useState(DEFAULT_ATHLETE_PRICING_RATES.saucePrice);
 
   useEffect(() => {
     if (!program) {
@@ -49,6 +50,7 @@ export default function RepasPage() {
         setMeals(sorted);
         setLoading(false);
       });
+    fetchAthletePricingRates(supabase).then((rates) => setSaucePrice(rates.saucePrice));
   }, [program, pack, router]);
 
   if (!program || !pack) return null;
@@ -135,7 +137,7 @@ export default function RepasPage() {
                       onChange={(e) => setMealSauce(meal.id, e.target.checked)}
                       className="h-3.5 w-3.5 rounded border-brand-300"
                     />
-                    Extra {meal.sauce_label} (+{formatPrice(EXTRA_SAUCE_PRICE)})
+                    Extra {meal.sauce_label} (+{formatPrice(saucePrice)})
                   </label>
                 )}
               </div>

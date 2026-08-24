@@ -153,16 +153,10 @@ export function deliveryFeeFor(city: string): number {
 export const WHATSAPP_NUMBER = "+212693401564";
 export const INSTAGRAM_URL = "https://www.instagram.com/saludea_meal_prep?igsi=MWFtemhjNXRkbDRz";
 
-// Formule Athlète — per-gram component pricing (DH/g), applied on top of a
-// 100g floor per component, in 10g increments.
+// Formule Athlète portion rules — the 100g floor and 10g step are fixed
+// business rules. The actual DH rates are admin-editable in
+// athlete_pricing_settings (see lib/athlete-pricing.ts), not hardcoded here.
 export const ATHLETE_PRICING = {
-  proteinRatePerGram: 0.22,
-  starchRatePerGram: 0.18,
-  vegRatePerGram: 0.06,
   minGrams: 100,
   gramStep: 10,
 } as const;
-
-// "Extra sauce" is each dish's own named sauce (meals.sauce_label), offered
-// as a paid add-on across every objective, not just Formule Athlète.
-export const EXTRA_SAUCE_PRICE = 8;

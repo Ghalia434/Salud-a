@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/lib/cart-store";
-import { PROGRAMS, EXTRA_SAUCE_PRICE } from "@/lib/constants";
+import { PROGRAMS } from "@/lib/constants";
 import {
   computeAthleteMealUnitPrice,
+  DEFAULT_ATHLETE_PRICING_RATES,
+  fetchAthletePricingRates,
   getDefaultAthleteCustomization,
   mealSauceTotal,
+  type AthletePricingRates,
 } from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
@@ -32,6 +35,7 @@ export default function PanierPage() {
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [extras, setExtras] = useState<Extra[]>([]);
+  const [rates, setRates] = useState<AthletePricingRates>(DEFAULT_ATHLETE_PRICING_RATES);
 
   useEffect(() => {
     if (!program) {
@@ -44,6 +48,7 @@ export default function PanierPage() {
     }
 
     const supabase = createClient();
+    fetchAthletePricingRates(supabase).then(setRates);
 
     const mealIds = Object.keys(items);
     if (mealIds.length > 0) {
@@ -79,12 +84,12 @@ export default function PanierPage() {
     const extra = extras.find((e) => e.id === extraId);
     return sum + (extra ? extra.price * qty : 0);
   }, 0);
-  const sauceTotal = mealSauceTotal(items, mealSauces);
+  const sauceTotal = mealSauceTotal(items, mealSauces, rates.saucePrice);
   const mealsTotal = isAthlete
     ? meals.reduce((sum, meal) => {
         const qty = items[meal.id] ?? 0;
         const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
-        return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
+        return sum + computeAthleteMealUnitPrice(meal, custom, rates) * qty;
       }, 0) + sauceTotal
     : pack.price;
   const total = mealsTotal + extrasTotal + (isAthlete ? 0 : sauceTotal);
@@ -128,7 +133,7 @@ export default function PanierPage() {
           const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
           const hasSauce = mealSauces[meal.id] ?? false;
           const unitPrice = isAthlete
-            ? computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0)
+            ? computeAthleteMealUnitPrice(meal, custom, rates) + (hasSauce ? rates.saucePrice : 0)
             : null;
           return (
             <li key={meal.id} className="flex items-center justify-between gap-4 p-4">

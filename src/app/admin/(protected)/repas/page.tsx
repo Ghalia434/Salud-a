@@ -13,12 +13,20 @@ export default async function AdminMealsPage() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-brand-800">Repas</h1>
-        <Link
-          href="/admin/repas/nouveau"
-          className="rounded-full bg-brand-700 px-6 py-2 font-semibold text-white"
-        >
-          + Ajouter un repas
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/repas/tarifs"
+            className="rounded-full border border-brand-300 px-6 py-2 font-semibold text-brand-700"
+          >
+            Tarifs
+          </Link>
+          <Link
+            href="/admin/repas/nouveau"
+            className="rounded-full bg-brand-700 px-6 py-2 font-semibold text-white"
+          >
+            + Ajouter un repas
+          </Link>
+        </div>
       </div>
       <p className="mt-2 text-sm text-brand-600">
         Chaque plat est visible pour les 4 objectifs (Perte de poids, Équilibré, Prise

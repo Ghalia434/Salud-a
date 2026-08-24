@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/lib/cart-store";
-import { ATHLETE_PRICING, EXTRA_SAUCE_PRICE } from "@/lib/constants";
+import { ATHLETE_PRICING } from "@/lib/constants";
 import {
   computeAthleteMealUnitPrice,
+  fetchAthletePricingRates,
   getDefaultAthleteCustomization,
   mealSauceTotal,
+  type AthletePricingRates,
 } from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
@@ -28,6 +30,7 @@ export default function PortionsPage() {
   const setMealSauce = useCartStore((s) => s.setMealSauce);
 
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [rates, setRates] = useState<AthletePricingRates | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,25 +52,25 @@ export default function PortionsPage() {
     }
 
     const supabase = createClient();
-    supabase
-      .from("meals")
-      .select("*")
-      .in("id", Object.keys(items))
-      .then(({ data }) => {
-        setMeals(data ?? []);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase.from("meals").select("*").in("id", Object.keys(items)),
+      fetchAthletePricingRates(supabase),
+    ]).then(([{ data }, fetchedRates]) => {
+      setMeals(data ?? []);
+      setRates(fetchedRates);
+      setLoading(false);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [program, pack, totalSelected, router]);
 
-  if (!program || program !== "athlete" || !pack) return null;
+  if (!program || program !== "athlete" || !pack || !rates) return null;
 
   const grandTotal =
     meals.reduce((sum, meal) => {
       const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
       const qty = items[meal.id] ?? 0;
-      return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
-    }, 0) + mealSauceTotal(items, mealSauces);
+      return sum + computeAthleteMealUnitPrice(meal, custom, rates) * qty;
+    }, 0) + mealSauceTotal(items, mealSauces, rates.saucePrice);
 
   return (
     <div>
@@ -87,7 +90,7 @@ export default function PortionsPage() {
           const qty = items[meal.id] ?? 0;
           const hasSauce = mealSauces[meal.id] ?? false;
           const unitPrice =
-            computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0);
+            computeAthleteMealUnitPrice(meal, custom, rates) + (hasSauce ? rates.saucePrice : 0);
           return (
             <div
               key={meal.id}
@@ -122,7 +125,7 @@ export default function PortionsPage() {
                     grams={custom.proteinGrams ?? ATHLETE_PRICING.minGrams}
                     min={ATHLETE_PRICING.minGrams}
                     step={ATHLETE_PRICING.gramStep}
-                    ratePerGram={ATHLETE_PRICING.proteinRatePerGram}
+                    ratePerGram={rates.proteinRatePerGram}
                     onChange={(proteinGrams) =>
                       setAthleteCustomization(meal.id, { ...custom, proteinGrams })
                     }
@@ -134,7 +137,7 @@ export default function PortionsPage() {
                     grams={custom.starchGrams ?? ATHLETE_PRICING.minGrams}
                     min={ATHLETE_PRICING.minGrams}
                     step={ATHLETE_PRICING.gramStep}
-                    ratePerGram={ATHLETE_PRICING.starchRatePerGram}
+                    ratePerGram={rates.starchRatePerGram}
                     onChange={(starchGrams) =>
                       setAthleteCustomization(meal.id, { ...custom, starchGrams })
                     }
@@ -146,7 +149,7 @@ export default function PortionsPage() {
                     grams={custom.vegGrams}
                     min={ATHLETE_PRICING.minGrams}
                     step={ATHLETE_PRICING.gramStep}
-                    ratePerGram={ATHLETE_PRICING.vegRatePerGram}
+                    ratePerGram={rates.vegRatePerGram}
                     onChange={(vegGrams) =>
                       setAthleteCustomization(meal.id, { ...custom, vegGrams })
                     }
@@ -174,7 +177,7 @@ export default function PortionsPage() {
                     onChange={(e) => setMealSauce(meal.id, e.target.checked)}
                     className="h-4 w-4 rounded border-brand-300"
                   />
-                  Extra {meal.sauce_label} (+{formatPrice(EXTRA_SAUCE_PRICE)})
+                  Extra {meal.sauce_label} (+{formatPrice(rates.saucePrice)})
                 </label>
               )}
             </div>

@@ -165,6 +165,19 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["order_extras"]["Row"]>;
         Relationships: [];
       };
+      athlete_pricing_settings: {
+        Row: {
+          id: boolean;
+          protein_price_per_10g: number;
+          starch_price_per_10g: number;
+          veg_price_per_10g: number;
+          sauce_price: number;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["athlete_pricing_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["athlete_pricing_settings"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

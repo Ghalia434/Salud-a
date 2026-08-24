@@ -1,6 +1,7 @@
-import { ATHLETE_PRICING, EXTRA_SAUCE_PRICE } from "@/lib/constants";
+import { ATHLETE_PRICING } from "@/lib/constants";
 import type { AthleteCustomization } from "@/lib/cart-store";
 import type { Database } from "@/lib/database.types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type MealLabels = Pick<
   Database["public"]["Tables"]["meals"]["Row"],
@@ -18,6 +19,37 @@ type MealDefaultGrams = Pick<
   | "veg_default_grams"
   | "extra_default_grams"
 >;
+
+// Formule Athlète's global protein/starch/veg rates and the flat extra-sauce
+// price are admin-editable (athlete_pricing_settings), priced per 10g since
+// that's the increment the client actually adjusts. These are the fallback
+// values used only if that row can't be loaded.
+export interface AthletePricingRates {
+  proteinRatePerGram: number;
+  starchRatePerGram: number;
+  vegRatePerGram: number;
+  saucePrice: number;
+}
+
+export const DEFAULT_ATHLETE_PRICING_RATES: AthletePricingRates = {
+  proteinRatePerGram: 0.22,
+  starchRatePerGram: 0.18,
+  vegRatePerGram: 0.06,
+  saucePrice: 8,
+};
+
+export async function fetchAthletePricingRates(
+  supabase: SupabaseClient<Database>
+): Promise<AthletePricingRates> {
+  const { data } = await supabase.from("athlete_pricing_settings").select("*").single();
+  if (!data) return DEFAULT_ATHLETE_PRICING_RATES;
+  return {
+    proteinRatePerGram: data.protein_price_per_10g / 10,
+    starchRatePerGram: data.starch_price_per_10g / 10,
+    vegRatePerGram: data.veg_price_per_10g / 10,
+    saucePrice: data.sauce_price,
+  };
+}
 
 // The starting portion a client sees for a given meal — the admin-set
 // default gram amount per component if configured, otherwise the 100g
@@ -49,17 +81,18 @@ export function getDefaultAthleteCustomization(meal: MealDefaultGrams): AthleteC
 // across every objective, not just Formule Athlète.
 export function computeAthleteMealUnitPrice(
   meal: MealLabels,
-  c: AthleteCustomization
+  c: AthleteCustomization,
+  rates: AthletePricingRates
 ): number {
   let total = 0;
   if (meal.protein_label && c.proteinGrams) {
-    total += c.proteinGrams * ATHLETE_PRICING.proteinRatePerGram;
+    total += c.proteinGrams * rates.proteinRatePerGram;
   }
   if (meal.starch_label && c.starchGrams) {
-    total += c.starchGrams * ATHLETE_PRICING.starchRatePerGram;
+    total += c.starchGrams * rates.starchRatePerGram;
   }
   if (meal.veg_label) {
-    total += c.vegGrams * ATHLETE_PRICING.vegRatePerGram;
+    total += c.vegGrams * rates.vegRatePerGram;
   }
   if (meal.extra_label && meal.extra_price_per_100g) {
     total += c.extraGrams * (meal.extra_price_per_100g / 100);
@@ -71,9 +104,10 @@ export function computeAthleteMealUnitPrice(
 // meal's quantity — shared by every objective's panier/récapitulatif.
 export function mealSauceTotal(
   items: Record<string, number>,
-  mealSauces: Record<string, boolean>
+  mealSauces: Record<string, boolean>,
+  saucePrice: number
 ): number {
   return Object.entries(items).reduce((sum, [mealId, qty]) => {
-    return sum + (mealSauces[mealId] ? EXTRA_SAUCE_PRICE * qty : 0);
+    return sum + (mealSauces[mealId] ? saucePrice * qty : 0);
   }, 0);
 }

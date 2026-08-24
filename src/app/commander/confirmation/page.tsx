@@ -6,11 +6,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore, type AthleteCustomization, type CartDelivery } from "@/lib/cart-store";
 import { isOrderingOpen } from "@/lib/business-hours";
-import { PROGRAMS, EXTRA_SAUCE_PRICE } from "@/lib/constants";
+import { PROGRAMS } from "@/lib/constants";
 import {
   computeAthleteMealUnitPrice,
+  DEFAULT_ATHLETE_PRICING_RATES,
+  fetchAthletePricingRates,
   getDefaultAthleteCustomization,
   mealSauceTotal,
+  type AthletePricingRates,
 } from "@/lib/athlete-pricing";
 import { formatPrice } from "@/lib/format";
 import type { Database, ProgramType } from "@/lib/database.types";
@@ -66,6 +69,8 @@ export default function ConfirmationPage() {
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [extras, setExtras] = useState<Extra[]>([]);
+  const [rates, setRates] = useState<AthletePricingRates>(DEFAULT_ATHLETE_PRICING_RATES);
+  const [ratesLoaded, setRatesLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -81,6 +86,10 @@ export default function ConfirmationPage() {
     }
 
     const supabase = createClient();
+    fetchAthletePricingRates(supabase).then((fetchedRates) => {
+      setRates(fetchedRates);
+      setRatesLoaded(true);
+    });
 
     const ids = Object.keys(items);
     if (ids.length > 0) {
@@ -113,19 +122,19 @@ export default function ConfirmationPage() {
     return sum + (extra ? extra.price * qty : 0);
   }, 0);
 
-  const sauceTotal = mealSauceTotal(items, mealSauces);
+  const sauceTotal = mealSauceTotal(items, mealSauces, rates.saucePrice);
   const mealsTotal = isAthlete
     ? meals.reduce((sum, meal) => {
         const qty = items[meal.id] ?? 0;
         const custom = athleteCustomization[meal.id] ?? getDefaultAthleteCustomization(meal);
-        return sum + computeAthleteMealUnitPrice(meal, custom) * qty;
+        return sum + computeAthleteMealUnitPrice(meal, custom, rates) * qty;
       }, 0) + sauceTotal
     : pack?.price ?? 0;
 
   const orderingOpen = isOrderingOpen();
 
   async function confirmOrder() {
-    if (!program || !pack || !delivery || !orderingOpen) return;
+    if (!program || !pack || !delivery || !orderingOpen || !ratesLoaded) return;
     setSubmitting(true);
     setError(null);
 
@@ -163,7 +172,7 @@ export default function ConfirmationPage() {
             meal_id,
             quantity,
             sauce: hasSauce,
-            unit_price: hasSauce ? EXTRA_SAUCE_PRICE : undefined,
+            unit_price: hasSauce ? rates.saucePrice : undefined,
           };
         }
         const meal = meals.find((m) => m.id === meal_id);
@@ -179,7 +188,8 @@ export default function ConfirmationPage() {
           veg_grams: custom.vegGrams,
           extra_grams: meal.extra_label ? custom.extraGrams : undefined,
           sauce: hasSauce,
-          unit_price: computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0),
+          unit_price:
+            computeAthleteMealUnitPrice(meal, custom, rates) + (hasSauce ? rates.saucePrice : 0),
         };
       }),
       p_extras: extrasPayload,
@@ -220,7 +230,8 @@ export default function ConfirmationPage() {
         return {
           name: meal.name,
           quantity,
-          unitPrice: computeAthleteMealUnitPrice(meal, custom) + (hasSauce ? EXTRA_SAUCE_PRICE : 0),
+          unitPrice:
+            computeAthleteMealUnitPrice(meal, custom, rates) + (hasSauce ? rates.saucePrice : 0),
           customizationLabel: formatCustomizationLabel(meal, custom, hasSauce),
         };
       }),
@@ -447,8 +458,8 @@ export default function ConfirmationPage() {
                     {isAthlete && (
                       <span>
                         {formatPrice(
-                          (computeAthleteMealUnitPrice(meal, custom) +
-                            (hasSauce ? EXTRA_SAUCE_PRICE : 0)) *
+                          (computeAthleteMealUnitPrice(meal, custom, rates) +
+                            (hasSauce ? rates.saucePrice : 0)) *
                             qty
                         )}
                       </span>
@@ -553,7 +564,7 @@ export default function ConfirmationPage() {
         )}
         <button
           onClick={confirmOrder}
-          disabled={submitting || !orderingOpen}
+          disabled={submitting || !orderingOpen || !ratesLoaded}
           className="rounded-full bg-brand-700 px-8 py-3 font-semibold text-white shadow disabled:opacity-40"
         >
           {submitting ? "Confirmation…" : "Confirmer la commande"}
