@@ -5,7 +5,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 type MealLabels = Pick<
   Database["public"]["Tables"]["meals"]["Row"],
-  "protein_label" | "starch_label" | "veg_label" | "extra_label" | "extra_price_per_100g"
+  | "protein_label"
+  | "starch_label"
+  | "veg_label"
+  | "extra_label"
+  | "extra_price_per_100g"
+  | "protein_price_per_10g"
+  | "starch_price_per_10g"
+  | "veg_price_per_10g"
 >;
 
 type MealDefaultGrams = Pick<
@@ -74,11 +81,14 @@ export function getDefaultAthleteCustomization(meal: MealDefaultGrams): AthleteC
 // Each component (protein/starch/veg) only counts toward the price — and
 // only appears in the portions UI — when the meal actually has that real
 // ingredient (e.g. Salade exotique has veg_label but no protein_label).
-// "extra" is a 4th, meal-specific component priced at its own rate
-// (meals.extra_price_per_100g), for ingredients that don't fit the fixed
-// global protein/starch/veg rates (e.g. Mozzarella at 20 DH/100g).
-// Extra sauce is priced separately (see mealSauceTotal) since it's offered
-// across every objective, not just Formule Athlète.
+// Each dish's protein/starch/veg can have its own price (meals.*_price_per_10g,
+// e.g. Poulet priced differently from Saumon) — when unset, it falls back to
+// the global rate in athlete_pricing_settings. "extra" is a 4th, meal-specific
+// component priced at its own rate (meals.extra_price_per_100g), for
+// ingredients that don't fit the protein/starch/veg model at all (e.g.
+// Mozzarella at 20 DH/100g). Extra sauce is priced separately (see
+// mealSauceTotal) since it's offered across every objective, not just
+// Formule Athlète.
 export function computeAthleteMealUnitPrice(
   meal: MealLabels,
   c: AthleteCustomization,
@@ -86,18 +96,31 @@ export function computeAthleteMealUnitPrice(
 ): number {
   let total = 0;
   if (meal.protein_label && c.proteinGrams) {
-    total += c.proteinGrams * rates.proteinRatePerGram;
+    const rate = (meal.protein_price_per_10g ?? rates.proteinRatePerGram * 10) / 10;
+    total += c.proteinGrams * rate;
   }
   if (meal.starch_label && c.starchGrams) {
-    total += c.starchGrams * rates.starchRatePerGram;
+    const rate = (meal.starch_price_per_10g ?? rates.starchRatePerGram * 10) / 10;
+    total += c.starchGrams * rate;
   }
   if (meal.veg_label) {
-    total += c.vegGrams * rates.vegRatePerGram;
+    const rate = (meal.veg_price_per_10g ?? rates.vegRatePerGram * 10) / 10;
+    total += c.vegGrams * rate;
   }
   if (meal.extra_label && meal.extra_price_per_100g) {
     total += c.extraGrams * (meal.extra_price_per_100g / 100);
   }
   return Math.round(total * 100) / 100;
+}
+
+// The effective DH/g rate actually applied to a dish's component — the
+// per-meal override if set, otherwise the global fallback. Used by the
+// admin pricing UI to show what a dish is really charging.
+export function effectiveIngredientRatePerGram(
+  mealPricePer10g: number | null,
+  globalRatePerGram: number
+): number {
+  return (mealPricePer10g ?? globalRatePerGram * 10) / 10;
 }
 
 // Total cost of "extra sauce" add-ons across selected meals, scaled by each

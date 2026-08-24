@@ -403,6 +403,12 @@ export default function ConfirmationPage() {
         </div>
 
         <div className="mt-8 flex justify-center gap-4 print:hidden">
+          <button
+            onClick={() => window.print()}
+            className="rounded-full border border-brand-300 px-6 py-3 font-semibold text-brand-700"
+          >
+            Imprimer le reçu
+          </button>
           <Link
             href="/"
             className="rounded-full bg-brand-700 px-6 py-3 font-semibold text-white"

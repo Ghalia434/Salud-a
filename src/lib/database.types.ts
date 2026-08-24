@@ -58,6 +58,9 @@ export interface Database {
           extra_label: string | null;
           extra_price_per_100g: number | null;
           extra_default_grams: number | null;
+          protein_price_per_10g: number | null;
+          starch_price_per_10g: number | null;
+          veg_price_per_10g: number | null;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["meals"]["Row"]>;
