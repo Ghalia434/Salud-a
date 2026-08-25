@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     siteName: "Saludèa",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: [{ url: "/logo.jpeg", width: 800, height: 800, alt: "Saludèa" }],
+    images: [{ url: "/logo.jpeg", width: 1254, height: 1254, alt: "Saludèa" }],
   },
   twitter: {
     card: "summary_large_image",

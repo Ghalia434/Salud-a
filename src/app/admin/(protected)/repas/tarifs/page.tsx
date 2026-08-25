@@ -5,7 +5,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { PROGRAMS, PROGRAM_ORDER } from "@/lib/constants";
 import { DEFAULT_ATHLETE_PRICING_RATES } from "@/lib/athlete-pricing";
-import { formatPrice } from "@/lib/format";
 import type { Database, ProgramType } from "@/lib/database.types";
 
 type ProgramPack = Database["public"]["Tables"]["program_packs"]["Row"];
@@ -297,70 +296,33 @@ export default function AdminTarifsPage() {
       </div>
 
       <div className="mt-8 rounded-2xl border border-brand-200 bg-white p-6 shadow-sm">
-        <h2 className="font-bold text-brand-800">
-          Formule Athlète — tarif par défaut (10g)
-        </h2>
+        <h2 className="font-bold text-brand-800">Formule Athlète — tarif par défaut</h2>
         <p className="mt-1 text-xs text-brand-500">
           Appliqué à tout plat dont un ingrédient n&apos;a pas de prix spécifique
-          ci-dessus. Le client ajuste chaque ingrédient par pas de 10g.
+          ci-dessus. Le prix de départ (100g) est la portion minimum ; le client
+          ajuste ensuite par pas de 10g.
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <label className="block">
-            <span className="text-sm font-semibold text-brand-700">Protéine (10g)</span>
-            <div className="mt-1 flex items-center gap-1">
-              <input
-                type="number"
-                min={0}
-                step={0.1}
-                value={proteinPrice}
-                onChange={(e) => setProteinPrice(e.target.value)}
-                className="w-full rounded-lg border border-brand-300 px-3 py-2"
-              />
-              <span className="text-sm text-brand-500">DH</span>
-            </div>
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-brand-700">Féculent (10g)</span>
-            <div className="mt-1 flex items-center gap-1">
-              <input
-                type="number"
-                min={0}
-                step={0.1}
-                value={starchPrice}
-                onChange={(e) => setStarchPrice(e.target.value)}
-                className="w-full rounded-lg border border-brand-300 px-3 py-2"
-              />
-              <span className="text-sm text-brand-500">DH</span>
-            </div>
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-brand-700">Légumes (10g)</span>
-            <div className="mt-1 flex items-center gap-1">
-              <input
-                type="number"
-                min={0}
-                step={0.1}
-                value={vegPrice}
-                onChange={(e) => setVegPrice(e.target.value)}
-                className="w-full rounded-lg border border-brand-300 px-3 py-2"
-              />
-              <span className="text-sm text-brand-500">DH</span>
-            </div>
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-brand-700">Extra sauce</span>
-            <div className="mt-1 flex items-center gap-1">
-              <input
-                type="number"
-                min={0}
-                step={0.5}
-                value={saucePrice}
-                onChange={(e) => setSaucePrice(e.target.value)}
-                className="w-full rounded-lg border border-brand-300 px-3 py-2"
-              />
-              <span className="text-sm text-brand-500">DH</span>
-            </div>
-          </label>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <IngredientPriceField label="Protéine" value={proteinPrice} onChange={setProteinPrice} />
+          <IngredientPriceField label="Féculent" value={starchPrice} onChange={setStarchPrice} />
+          <IngredientPriceField label="Légumes" value={vegPrice} onChange={setVegPrice} />
+          <div className="rounded-xl border border-brand-100 bg-brand-cream/60 p-3">
+            <span className="text-sm font-semibold text-brand-800">Extra sauce</span>
+            <label className="mt-2 block max-w-[140px]">
+              <span className="text-xs text-brand-600">Prix fixe</span>
+              <div className="mt-1 flex items-center gap-1">
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={saucePrice}
+                  onChange={(e) => setSaucePrice(e.target.value)}
+                  className="w-full rounded-lg border border-brand-300 px-2 py-1.5 text-sm"
+                />
+                <span className="text-xs text-brand-500">DH</span>
+              </div>
+            </label>
+          </div>
         </div>
         <p className="mt-3 text-xs text-brand-500">
           Le prix de la sauce est fixe (pas au gramme) et s&apos;applique aussi aux 4 autres
@@ -381,11 +343,15 @@ export default function AdminTarifsPage() {
   );
 }
 
-// Shows a price input for one ingredient, with the equivalent price for the
-// other denomination as a caption — protein/starch/veg are priced per 10g
-// (the client's adjustment step) but the 100g minimum-order floor is shown
-// alongside for reference; the meal-specific "extra" ingredient is priced
-// per 100g (per100g=true), so the caption shows its 10g equivalent instead.
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+// Two editable, synced price inputs for one ingredient: 10g (the increment
+// the client adjusts by) and 100g (the starting/minimum portion — the
+// "base" price before any portion adjustment). `value`/`onChange` always
+// carry the stored unit (per100g controls which one that is); editing
+// either input converts and updates the same underlying value.
 function IngredientPriceField({
   label,
   value,
@@ -399,34 +365,64 @@ function IngredientPriceField({
 }) {
   const numeric = Number(value);
   const hasValue = value !== "" && !Number.isNaN(numeric);
-  const equivalent = per100g ? numeric / 10 : numeric * 10;
+
+  const price10g = hasValue ? String(per100g ? round2(numeric / 10) : numeric) : "";
+  const price100g = hasValue ? String(per100g ? numeric : round2(numeric * 10)) : "";
+
+  function handle10gChange(v: string) {
+    if (v === "") return onChange("");
+    const n = Number(v);
+    if (Number.isNaN(n)) return;
+    onChange(String(per100g ? round2(n * 10) : n));
+  }
+
+  function handle100gChange(v: string) {
+    if (v === "") return onChange("");
+    const n = Number(v);
+    if (Number.isNaN(n)) return;
+    onChange(String(per100g ? n : round2(n / 10)));
+  }
 
   return (
-    <label className="block">
-      <span className="text-sm font-semibold text-brand-700">
-        {label} — Prix pour {per100g ? "100g" : "10g"}
-      </span>
-      <div className="mt-1 flex items-center gap-1">
-        <input
-          type="number"
-          min={0}
-          step={0.1}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Tarif par défaut"
-          className="w-full rounded-lg border border-brand-300 px-3 py-2"
-        />
-        <span className="text-sm text-brand-500">DH</span>
+    <div className="rounded-xl border border-brand-100 bg-brand-cream/60 p-3">
+      <span className="text-sm font-semibold text-brand-800">{label}</span>
+      <div className="mt-2 grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-xs text-brand-600">Prix / 10g</span>
+          <div className="mt-1 flex items-center gap-1">
+            <input
+              type="number"
+              min={0}
+              step={0.1}
+              value={price10g}
+              onChange={(e) => handle10gChange(e.target.value)}
+              placeholder="Défaut"
+              className="w-full rounded-lg border border-brand-300 px-2 py-1.5 text-sm"
+            />
+            <span className="text-xs text-brand-500">DH</span>
+          </div>
+        </label>
+        <label className="block">
+          <span className="text-xs text-brand-600">Prix / 100g (départ)</span>
+          <div className="mt-1 flex items-center gap-1">
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={price100g}
+              onChange={(e) => handle100gChange(e.target.value)}
+              placeholder="Défaut"
+              className="w-full rounded-lg border border-brand-300 px-2 py-1.5 text-sm"
+            />
+            <span className="text-xs text-brand-500">DH</span>
+          </div>
+        </label>
       </div>
-      <p className="mt-1 text-xs text-brand-500">
-        {hasValue
-          ? per100g
-            ? `= ${formatPrice(equivalent)} pour 10g`
-            : `= ${formatPrice(equivalent)} pour 100g (minimum de commande)`
-          : per100g
-            ? "Vide = composant non facturé"
-            : "Vide = tarif par défaut appliqué"}
-      </p>
-    </label>
+      {!hasValue && (
+        <p className="mt-1 text-xs text-brand-500">
+          {per100g ? "Vide = composant non facturé" : "Vide = tarif par défaut appliqué"}
+        </p>
+      )}
+    </div>
   );
 }
