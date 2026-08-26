@@ -24,9 +24,6 @@ export default function AdminTarifsPage() {
   const [packs, setPacks] = useState<ProgramPack[]>([]);
   const [packPrices, setPackPrices] = useState<Record<string, string>>({});
 
-  const [proteinPrice, setProteinPrice] = useState("");
-  const [starchPrice, setStarchPrice] = useState("");
-  const [vegPrice, setVegPrice] = useState("");
   const [saucePrice, setSaucePrice] = useState("");
 
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -49,17 +46,9 @@ export default function AdminTarifsPage() {
       const list = packsData ?? [];
       setPacks(list);
       setPackPrices(Object.fromEntries(list.map((p) => [p.id, String(p.price)])));
-      if (settings) {
-        setProteinPrice(String(settings.protein_price_per_10g));
-        setStarchPrice(String(settings.starch_price_per_10g));
-        setVegPrice(String(settings.veg_price_per_10g));
-        setSaucePrice(String(settings.sauce_price));
-      } else {
-        setProteinPrice(String(DEFAULT_ATHLETE_PRICING_RATES.proteinRatePerGram * 10));
-        setStarchPrice(String(DEFAULT_ATHLETE_PRICING_RATES.starchRatePerGram * 10));
-        setVegPrice(String(DEFAULT_ATHLETE_PRICING_RATES.vegRatePerGram * 10));
-        setSaucePrice(String(DEFAULT_ATHLETE_PRICING_RATES.saucePrice));
-      }
+      setSaucePrice(
+        String(settings ? settings.sauce_price : DEFAULT_ATHLETE_PRICING_RATES.saucePrice)
+      );
       // Only meals with at least one Formule Athlète component are relevant here.
       setMeals(
         (mealsData ?? []).filter(
@@ -140,12 +129,7 @@ export default function AdminTarifsPage() {
 
     const settingsUpdate = supabase
       .from("athlete_pricing_settings")
-      .update({
-        protein_price_per_10g: Number(proteinPrice),
-        starch_price_per_10g: Number(starchPrice),
-        veg_price_per_10g: Number(vegPrice),
-        sauce_price: Number(saucePrice),
-      })
+      .update({ sauce_price: Number(saucePrice) })
       .eq("id", true);
 
     const results = await Promise.all([...packUpdates, settingsUpdate]);
@@ -217,8 +201,7 @@ export default function AdminTarifsPage() {
         <h2 className="font-bold text-brand-800">Formule Athlète — prix par plat</h2>
         <p className="mt-1 text-xs text-brand-500">
           Choisissez un plat pour fixer le prix de ses ingrédients réels (ex : le Poulet
-          d&apos;un plat peut coûter différemment du Poulet d&apos;un autre plat). Laisser vide
-          pour utiliser le tarif par défaut ci-dessous.
+          d&apos;un plat peut coûter différemment du Poulet d&apos;un autre plat).
         </p>
 
         <label className="mt-4 block">
@@ -296,38 +279,25 @@ export default function AdminTarifsPage() {
       </div>
 
       <div className="mt-8 rounded-2xl border border-brand-200 bg-white p-6 shadow-sm">
-        <h2 className="font-bold text-brand-800">Formule Athlète — tarif par défaut</h2>
+        <h2 className="font-bold text-brand-800">Extra sauce</h2>
         <p className="mt-1 text-xs text-brand-500">
-          Appliqué à tout plat dont un ingrédient n&apos;a pas de prix spécifique
-          ci-dessus. Le prix de départ (100g) est la portion minimum ; le client
-          ajuste ensuite par pas de 10g.
+          Prix fixe (pas au gramme) — s&apos;applique à toutes les formules, pas
+          seulement à la Formule Athlète.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <IngredientPriceField label="Protéine" value={proteinPrice} onChange={setProteinPrice} />
-          <IngredientPriceField label="Féculent" value={starchPrice} onChange={setStarchPrice} />
-          <IngredientPriceField label="Légumes" value={vegPrice} onChange={setVegPrice} />
-          <div className="rounded-xl border border-brand-100 bg-brand-cream/60 p-3">
-            <span className="text-sm font-semibold text-brand-800">Extra sauce</span>
-            <label className="mt-2 block max-w-[140px]">
-              <span className="text-xs text-brand-600">Prix fixe</span>
-              <div className="mt-1 flex items-center gap-1">
-                <input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  value={saucePrice}
-                  onChange={(e) => setSaucePrice(e.target.value)}
-                  className="w-full rounded-lg border border-brand-300 px-2 py-1.5 text-sm"
-                />
-                <span className="text-xs text-brand-500">DH</span>
-              </div>
-            </label>
+        <label className="mt-3 block max-w-[160px]">
+          <span className="text-xs text-brand-600">Prix fixe</span>
+          <div className="mt-1 flex items-center gap-1">
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={saucePrice}
+              onChange={(e) => setSaucePrice(e.target.value)}
+              className="w-full rounded-lg border border-brand-300 px-3 py-2"
+            />
+            <span className="text-sm text-brand-500">DH</span>
           </div>
-        </div>
-        <p className="mt-3 text-xs text-brand-500">
-          Le prix de la sauce est fixe (pas au gramme) et s&apos;applique aussi aux 4 autres
-          formules.
-        </p>
+        </label>
       </div>
 
       <div className="mt-8 flex justify-end">
