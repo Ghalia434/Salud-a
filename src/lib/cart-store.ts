@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { ATHLETE_PRICING } from "@/lib/constants";
 import type { ProgramType } from "@/lib/database.types";
 
 export interface CartPack {
@@ -32,10 +33,10 @@ export interface AthleteCustomization {
 }
 
 export const DEFAULT_ATHLETE_CUSTOMIZATION: AthleteCustomization = {
-  proteinGrams: 100,
-  starchGrams: 100,
-  vegGrams: 100,
-  extraGrams: 100,
+  proteinGrams: ATHLETE_PRICING.minGrams,
+  starchGrams: ATHLETE_PRICING.minGrams,
+  vegGrams: ATHLETE_PRICING.minGrams,
+  extraGrams: ATHLETE_PRICING.minGrams,
 };
 
 interface CartState {

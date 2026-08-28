@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { ATHLETE_PRICING } from "@/lib/constants";
 import type { ProgramType } from "@/lib/database.types";
 
 // Every meal is shown for all 3 objectifs; the DB column is kept (not null)
@@ -213,7 +214,7 @@ export function MealForm({ mealId }: { mealId?: string }) {
               step={10}
               value={proteinDefaultGrams}
               onChange={(e) => setProteinDefaultGrams(e.target.value)}
-              placeholder="100"
+              placeholder={String(ATHLETE_PRICING.minGrams)}
               className="mt-1 w-full rounded-lg border border-brand-300 px-2 py-2"
             />
           </label>
@@ -239,7 +240,7 @@ export function MealForm({ mealId }: { mealId?: string }) {
               step={10}
               value={starchDefaultGrams}
               onChange={(e) => setStarchDefaultGrams(e.target.value)}
-              placeholder="100"
+              placeholder={String(ATHLETE_PRICING.minGrams)}
               className="mt-1 w-full rounded-lg border border-brand-300 px-2 py-2"
             />
           </label>
@@ -248,7 +249,8 @@ export function MealForm({ mealId }: { mealId?: string }) {
       <p className="-mt-3 text-xs text-brand-500">
         Laisser le nom vide si le plat n&apos;a pas de composant dédié — il ne sera
         pas proposé dans la personnalisation de la Formule Athlète. Le grammage par
-        défaut est la portion de départ proposée au client (100g si laissé vide).
+        défaut est la portion de départ proposée au client ({ATHLETE_PRICING.minGrams}g si
+        laissé vide).
       </p>
 
       <div className="grid grid-cols-2 gap-4">
@@ -273,7 +275,7 @@ export function MealForm({ mealId }: { mealId?: string }) {
               step={10}
               value={vegDefaultGrams}
               onChange={(e) => setVegDefaultGrams(e.target.value)}
-              placeholder="100"
+              placeholder={String(ATHLETE_PRICING.minGrams)}
               className="mt-1 w-full rounded-lg border border-brand-300 px-2 py-2"
             />
           </label>
@@ -317,7 +319,7 @@ export function MealForm({ mealId }: { mealId?: string }) {
               step={10}
               value={extraDefaultGrams}
               onChange={(e) => setExtraDefaultGrams(e.target.value)}
-              placeholder="100"
+              placeholder={String(ATHLETE_PRICING.minGrams)}
               className="mt-1 w-full rounded-lg border border-brand-300 px-2 py-2"
             />
           </label>

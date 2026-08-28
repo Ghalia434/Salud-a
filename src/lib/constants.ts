@@ -153,10 +153,10 @@ export function deliveryFeeFor(city: string): number {
 export const WHATSAPP_NUMBER = "+212693401564";
 export const INSTAGRAM_URL = "https://www.instagram.com/saludea_meal_prep?igsi=MWFtemhjNXRkbDRz";
 
-// Formule Athlète portion rules — the 100g floor and 10g step are fixed
+// Formule Athlète portion rules — the 200g floor and 10g step are fixed
 // business rules. The actual DH rates are admin-editable in
 // athlete_pricing_settings (see lib/athlete-pricing.ts), not hardcoded here.
 export const ATHLETE_PRICING = {
-  minGrams: 100,
+  minGrams: 200,
   gramStep: 10,
 } as const;

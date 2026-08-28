@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { PROGRAMS, PROGRAM_ORDER } from "@/lib/constants";
+import { ATHLETE_PRICING, PROGRAMS, PROGRAM_ORDER } from "@/lib/constants";
 import { DEFAULT_ATHLETE_PRICING_RATES } from "@/lib/athlete-pricing";
 import type { Database, ProgramType } from "@/lib/database.types";
 
@@ -233,7 +233,7 @@ export default function AdminTarifsPage() {
               </p>
             )}
 
-            <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="mt-4 grid grid-cols-2 gap-4" key={selectedMeal.id}>
               {selectedMeal.protein_label && (
                 <IngredientPriceField
                   label={selectedMeal.protein_label}
@@ -318,10 +318,18 @@ function round2(n: number): number {
 }
 
 // Two editable, synced price inputs for one ingredient: 10g (the increment
-// the client adjusts by) and 100g (the starting/minimum portion — the
-// "base" price before any portion adjustment). `value`/`onChange` always
-// carry the stored unit (per100g controls which one that is); editing
-// either input converts and updates the same underlying value.
+// the client adjusts by) and the current starting/minimum portion
+// (ATHLETE_PRICING.minGrams — 200g at the time of writing, but computed
+// live so this stays correct if that floor ever changes). `value`/
+// `onChange` always carry the ingredient's stored unit — 10g for
+// protein/starch/veg, 100g for the meal-specific "extra" (per100g=true).
+//
+// Each input keeps its own local text state, set verbatim on every
+// keystroke of the field being typed into — only the *other* (untouched)
+// field gets recomputed from the parsed rate. Deriving both fields from a
+// single parsed-number value on every render would silently strip
+// trailing characters like "2." while typing "2.6", making the field feel
+// like it rejects decimal input.
 function IngredientPriceField({
   label,
   value,
@@ -333,25 +341,49 @@ function IngredientPriceField({
   onChange: (value: string) => void;
   per100g?: boolean;
 }) {
-  const numeric = Number(value);
-  const hasValue = value !== "" && !Number.isNaN(numeric);
+  const storedUnitGrams = per100g ? 100 : 10;
+  const floorGrams = ATHLETE_PRICING.minGrams;
 
-  const price10g = hasValue ? String(per100g ? round2(numeric / 10) : numeric) : "";
-  const price100g = hasValue ? String(per100g ? numeric : round2(numeric * 10)) : "";
+  const [raw10g, setRaw10g] = useState(() =>
+    value === "" ? "" : String(round2((Number(value) / storedUnitGrams) * 10))
+  );
+  const [rawFloor, setRawFloor] = useState(() =>
+    value === "" ? "" : String(round2((Number(value) / storedUnitGrams) * floorGrams))
+  );
+
+  function commit(ratePerGram: number) {
+    onChange(String(round2(ratePerGram * storedUnitGrams)));
+  }
 
   function handle10gChange(v: string) {
-    if (v === "") return onChange("");
+    setRaw10g(v);
+    if (v === "") {
+      setRawFloor("");
+      onChange("");
+      return;
+    }
     const n = Number(v);
     if (Number.isNaN(n)) return;
-    onChange(String(per100g ? round2(n * 10) : n));
+    const rate = n / 10;
+    setRawFloor(String(round2(rate * floorGrams)));
+    commit(rate);
   }
 
-  function handle100gChange(v: string) {
-    if (v === "") return onChange("");
+  function handleFloorChange(v: string) {
+    setRawFloor(v);
+    if (v === "") {
+      setRaw10g("");
+      onChange("");
+      return;
+    }
     const n = Number(v);
     if (Number.isNaN(n)) return;
-    onChange(String(per100g ? n : round2(n / 10)));
+    const rate = n / floorGrams;
+    setRaw10g(String(round2(rate * 10)));
+    commit(rate);
   }
+
+  const hasValue = raw10g !== "" || rawFloor !== "";
 
   return (
     <div className="rounded-xl border border-brand-100 bg-brand-cream/60 p-3">
@@ -364,7 +396,7 @@ function IngredientPriceField({
               type="number"
               min={0}
               step={0.1}
-              value={price10g}
+              value={raw10g}
               onChange={(e) => handle10gChange(e.target.value)}
               placeholder="Défaut"
               className="w-full rounded-lg border border-brand-300 px-2 py-1.5 text-sm"
@@ -373,14 +405,14 @@ function IngredientPriceField({
           </div>
         </label>
         <label className="block">
-          <span className="text-xs text-brand-600">Prix / 100g (départ)</span>
+          <span className="text-xs text-brand-600">Prix / {floorGrams}g (départ)</span>
           <div className="mt-1 flex items-center gap-1">
             <input
               type="number"
               min={0}
               step={0.5}
-              value={price100g}
-              onChange={(e) => handle100gChange(e.target.value)}
+              value={rawFloor}
+              onChange={(e) => handleFloorChange(e.target.value)}
               placeholder="Défaut"
               className="w-full rounded-lg border border-brand-300 px-2 py-1.5 text-sm"
             />
