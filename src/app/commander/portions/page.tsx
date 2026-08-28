@@ -8,6 +8,7 @@ import { useCartStore } from "@/lib/cart-store";
 import { ATHLETE_PRICING } from "@/lib/constants";
 import {
   computeAthleteMealUnitPrice,
+  effectiveIngredientRatePerGram,
   fetchAthletePricingRates,
   getDefaultAthleteCustomization,
   mealSauceTotal,
@@ -125,7 +126,10 @@ export default function PortionsPage() {
                     grams={custom.proteinGrams ?? ATHLETE_PRICING.minGrams}
                     min={ATHLETE_PRICING.minGrams}
                     step={ATHLETE_PRICING.gramStep}
-                    ratePerGram={rates.proteinRatePerGram}
+                    ratePerGram={effectiveIngredientRatePerGram(
+                      meal.protein_price_per_10g,
+                      rates.proteinRatePerGram
+                    )}
                     onChange={(proteinGrams) =>
                       setAthleteCustomization(meal.id, { ...custom, proteinGrams })
                     }
@@ -137,7 +141,10 @@ export default function PortionsPage() {
                     grams={custom.starchGrams ?? ATHLETE_PRICING.minGrams}
                     min={ATHLETE_PRICING.minGrams}
                     step={ATHLETE_PRICING.gramStep}
-                    ratePerGram={rates.starchRatePerGram}
+                    ratePerGram={effectiveIngredientRatePerGram(
+                      meal.starch_price_per_10g,
+                      rates.starchRatePerGram
+                    )}
                     onChange={(starchGrams) =>
                       setAthleteCustomization(meal.id, { ...custom, starchGrams })
                     }
@@ -149,7 +156,10 @@ export default function PortionsPage() {
                     grams={custom.vegGrams}
                     min={ATHLETE_PRICING.minGrams}
                     step={ATHLETE_PRICING.gramStep}
-                    ratePerGram={rates.vegRatePerGram}
+                    ratePerGram={effectiveIngredientRatePerGram(
+                      meal.veg_price_per_10g,
+                      rates.vegRatePerGram
+                    )}
                     onChange={(vegGrams) =>
                       setAthleteCustomization(meal.id, { ...custom, vegGrams })
                     }
