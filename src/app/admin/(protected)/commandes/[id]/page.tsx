@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { OrderStatusSelect } from "@/components/admin/order-status-select";
-import { PROGRAMS } from "@/lib/constants";
+import { PrintReceiptButton } from "@/components/admin/print-receipt-button";
+import { ORDER_STATUS_FLOW, PROGRAMS } from "@/lib/constants";
 import { formatDateTime, formatPrice } from "@/lib/format";
 
 export default async function AdminOrderDetailPage({
@@ -51,6 +52,10 @@ export default async function AdminOrderDetailPage({
     return sum + (extra ? extra.price * e.quantity : 0);
   }, 0);
 
+  // The receipt is only printable once the admin has confirmed the order —
+  // "en_attente" and "annulee" (not part of the linear flow) don't qualify.
+  const isConfirmedOrLater = ORDER_STATUS_FLOW.indexOf(order.status) >= ORDER_STATUS_FLOW.indexOf("confirmee");
+
   const isAthlete = order.program === "athlete";
   // For Athlete orders the sauce surcharge is already folded into
   // order.pack_price (the computed per-gram total); for every other
@@ -71,10 +76,16 @@ export default async function AdminOrderDetailPage({
             Commandée le {formatDateTime(order.created_at)}
           </p>
         </div>
-        <OrderStatusSelect orderId={order.id} status={order.status} />
+        <div className="flex items-center gap-3 print:hidden">
+          {isConfirmedOrLater && <PrintReceiptButton />}
+          <OrderStatusSelect orderId={order.id} status={order.status} />
+        </div>
       </div>
 
-      <div className="mt-8 rounded-2xl border border-brand-200 bg-white p-6">
+      <div
+        id="receipt"
+        className="mt-8 rounded-2xl border border-brand-200 bg-white p-6 print:border-none print:shadow-none"
+      >
         <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-500">
           Client
         </h2>
@@ -82,7 +93,7 @@ export default async function AdminOrderDetailPage({
         <p className="text-brand-600">{order.phone}</p>
         <Link
           href={`/admin/clients/${encodeURIComponent(order.phone)}`}
-          className="text-sm font-semibold text-brand-700 underline"
+          className="text-sm font-semibold text-brand-700 underline print:hidden"
         >
           Voir la fiche client
         </Link>

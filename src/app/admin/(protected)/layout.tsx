@@ -29,7 +29,7 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-full flex-col bg-brand-100">
-      <header className="border-b border-brand-200 bg-brand-900 text-white">
+      <header className="border-b border-brand-200 bg-brand-900 text-white print:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/admin" className="text-xl font-bold">
             Saludèa · Admin
