@@ -29,6 +29,30 @@ export default async function AdminOrdersPage({
 
   const { data: orders } = await query;
 
+  const orderIds = (orders ?? []).map((o) => o.id);
+  const { data: orderExtras } = orderIds.length
+    ? await supabase
+        .from("order_extras")
+        .select("order_id, extra_id, quantity, is_gift")
+        .in("order_id", orderIds)
+        .eq("is_gift", false)
+    : { data: [] };
+
+  const extraIds = [...new Set((orderExtras ?? []).map((e) => e.extra_id))];
+  const { data: extras } = extraIds.length
+    ? await supabase.from("extras").select("id, price").in("id", extraIds)
+    : { data: [] };
+  const extraPriceById = new Map((extras ?? []).map((e) => [e.id, e.price]));
+
+  const extrasTotalByOrder = new Map<string, number>();
+  for (const e of orderExtras ?? []) {
+    const price = extraPriceById.get(e.extra_id) ?? 0;
+    extrasTotalByOrder.set(
+      e.order_id,
+      (extrasTotalByOrder.get(e.order_id) ?? 0) + price * e.quantity
+    );
+  }
+
   return (
     <div>
       <h1 className="text-3xl font-bold text-brand-800">Commandes</h1>
@@ -88,7 +112,11 @@ export default async function AdminOrdersPage({
               </div>
               <div className="flex items-center gap-4">
                 <span className="font-semibold text-brand-800">
-                  {formatPrice(order.pack_price + order.delivery_fee)}
+                  {formatPrice(
+                    order.pack_price +
+                      order.delivery_fee +
+                      (extrasTotalByOrder.get(order.id) ?? 0)
+                  )}
                 </span>
                 <StatusBadge status={order.status} />
               </div>
