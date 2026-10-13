@@ -6,7 +6,7 @@ import "./globals.css";
 const SITE_URL = "https://www.saludea.ma";
 const SITE_TITLE = "Saludèa — Meal Prep Healthy Food à Casablanca";
 const SITE_DESCRIPTION =
-  "Repas frais, naturels et équilibrés, livrés chaque lundi et jeudi à Casablanca et Bouskoura. Meal prep sur-mesure : perte de poids, prise de masse, équilibre, transformation corporelle, Formule Athlète.";
+  "Repas frais, naturels et équilibrés, livrés chaque dimanche et jeudi à Casablanca et Bouskoura. Meal prep sur-mesure : perte de poids, prise de masse, équilibre, transformation corporelle, Formule Athlète.";
 
 const LOCAL_BUSINESS_JSON_LD = {
   "@context": "https://schema.org",

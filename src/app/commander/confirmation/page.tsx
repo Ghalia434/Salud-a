@@ -356,7 +356,7 @@ export default function ConfirmationPage() {
             </p>
             <p className="text-brand-600">{receipt.delivery.phone}</p>
             <p className="mt-1 text-xs text-brand-500">
-              Livraison le lundi ou le jeudi suivant.
+              Livraison le dimanche ou le jeudi suivant.
             </p>
           </div>
 

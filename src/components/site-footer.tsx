@@ -28,7 +28,7 @@ export function SiteFooter() {
         <p>© {new Date().getFullYear()} Saludèa — Meal Prep, vie équilibrée.</p>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-brand-300">
           <span>Livraison à Casablanca et Bouskoura</span>
-          <span>Livraison chaque lundi et jeudi</span>
+          <span>Livraison chaque dimanche et jeudi</span>
           <span>Fermé dimanche et mercredi</span>
         </div>
         <div className="flex items-center gap-3">

@@ -35,7 +35,7 @@ export default function Home() {
               Meal Prep à partir de 3 plats. Frais, naturel, équilibré.
             </h1>
             <p className="mt-6 max-w-xl text-lg text-brand-200">
-              Des repas sains, faits maison et livrés chaque lundi et jeudi à
+              Des repas sains, faits maison et livrés chaque dimanche et jeudi à
               Casablanca et Bouskoura. Choisissez votre objectif, composez vos
               repas, on s&apos;occupe du reste.
             </p>
@@ -59,7 +59,7 @@ export default function Home() {
             <dl className="mt-14 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
               {[
                 ["Casa & Bouskoura", "Zones de livraison"],
-                ["Lun & Jeu", "Livraison"],
+                ["Dim & Jeu", "Livraison"],
                 ["Dim & Mer", "Commandes fermées"],
                 ["Min. 3", "Plats par commande"],
               ].map(([value, label]) => (
